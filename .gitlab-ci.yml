@@ -1,0 +1,17 @@
+image: registry.gitlab.heu.group/docker-tools/pipelines:v8.0
+
+variables:
+  IMAGE_REPOSITORY: "$CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG"
+  IMAGE_TAG: "$CI_COMMIT_SHA"
+#  KUBE_NAMESPACE: one-offer-rank
+
+stages:
+  - build
+  - test
+  - lint
+
+include:
+  - local: gitlab-ci/build.yaml
+  - local: gitlab-ci/test.yaml
+  - local: gitlab-ci/lint.yaml
+

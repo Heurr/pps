@@ -1,0 +1,50 @@
+version: "3.9"
+name: price-services
+
+services:
+  api:
+    build:
+      context: .
+      target: development
+    environment:
+      PS_APP_ENV: dev
+      PS_LOG_LEVEL: info
+      PS_LOG_FORMAT: default
+      PS_POSTGRES_DB_HOST: db
+      PS_POSTGRES_DB_PASSWORD: alpharius
+      PS_API_URL: "http://price-services-api"
+      PS_APP_SECRET: pz8BL6OTBbtiPyONEXk00rFPX9WTXIeRJ8oI3CKv79U
+    volumes:
+      - ./alembic:/usr/src/app/alembic
+      - ./app:/usr/src/app/app
+      - ./scripts:/usr/src/app/scripts
+      - ./tests:/usr/src/app/tests
+      - ./alembic.ini:/usr/src/app/alembic.ini
+      - ./pyproject.toml:/usr/src/app/pyproject.toml
+      - ./poetry.lock:/usr/src/app/poetry.lock
+    ports:
+      - "8080:80"
+      - "9090"
+    command:
+      - /bin/bash
+      - -c
+      - |
+        scripts/wait-for.sh -t 10 db:5432 -- echo "Postgres DB is ready"
+        scripts/run-api-reload.sh
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: password
+      PS_DB_USER: api-user
+      PS_DB_PASSWORD: alpharius
+      PS_DB_NAMES: price-services
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./docker/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
+
+

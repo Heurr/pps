@@ -1,0 +1,37 @@
+.build:
+  image: registry.gitlab.heu.group/docker-tools/kaniko:latest
+  stage: build
+  tags:
+    - gcp
+    - prod
+  before_script:
+    - gitlab_ci_prepare
+  script:
+    - echo "$IMAGE_REPOSITORY:$IMAGE_TAG"
+    - /kaniko/executor
+      --cache=true
+      --cache-repo=$IMAGE_REPOSITORY
+      --cache-ttl=120h
+      --target=$TARGET
+      -f Dockerfile
+      -d $IMAGE_REPOSITORY:$IMAGE_TAG
+      -c $PWD
+
+
+build-dev:
+  extends: .build
+  variables:
+    TARGET: development
+  only:
+    refs:
+      - branches
+  except:
+    - master
+
+build-prod:
+  extends: .build
+  variables:
+    TARGET: production
+  only:
+    refs:
+      - master

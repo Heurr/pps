@@ -1,0 +1,41 @@
+.python-lint:
+  stage: lint
+  tags:
+    - gcp
+    - prod
+  image:
+    name: "$IMAGE_REPOSITORY:$IMAGE_TAG"
+    entrypoint: [""]
+  needs:
+    - build-dev
+  only:
+    refs:
+      - branches
+  except:
+    - master
+
+
+python-conventions:
+  extends: .python-lint
+  script:
+    - scripts/conventions.sh
+
+
+python-types:
+  extends: .python-lint
+  script:
+    - scripts/types.sh
+
+
+#lint-helm:
+#  stage: lint
+#  tags:
+#    - gcp
+#    - prod
+#  script:
+#    - scripts/lint-helm.sh
+#  only:
+#    refs:
+#      - branches
+#  except:
+#    - master
