@@ -1,0 +1,36 @@
+test:
+  stage: test
+  tags:
+    - gcp
+    - prod
+  image:
+    name: "$IMAGE_REPOSITORY:$IMAGE_TAG"
+    entrypoint: [ "" ]
+  services:
+    - name: postgres:14-alpine
+      alias: db
+      variables:
+        POSTGRES_USER: api-user
+        POSTGRES_PASSWORD: alpharius
+        POSTGRES_DB: price-services
+
+  variables:
+    PS_APP_SECRET: pz8BL6OTBbtiPyONEXk00rFPX9WTXIeRJ8oI3CKv79U
+    PS_APP_ENV: dev
+    PS_LOG_LEVEL: info
+    PS_LOG_FORMAT: default
+    PS_POSTGRES_DB_HOST: db
+    PS_API_URL: "http://price-services-api"
+    PS_POSTGRES_DB_PASSWORD: alpharius
+  needs:
+    - build-dev
+  script:
+    - scripts/wait-for.sh -t 10 db:5432 -- echo "Postgres DB is ready"
+    - scripts/tests.sh
+  only:
+    refs:
+      - branches
+  except:
+    - master
+
+
