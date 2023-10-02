@@ -1,12 +1,18 @@
-import enum
+from enum import StrEnum
 
 
-class LogFormatType(str, enum.Enum):
+class LogFormatType(StrEnum):
     DEFAULT = "default"
     JSON_LOGGER = "jsonlogger"
 
 
-class CountryCode(str, enum.Enum):
+class PriceType(StrEnum):
+    REGULAR = "REGULAR"
+    DISCOUNT = "DISCOUNT"
+    MEMBERSHIP = "MEMBERSHIP"
+
+
+class CountryCode(StrEnum):
     BOSNIA_AND_HERZEGOVINA = "BA"
     BULGARIA = "BG"
     CROATIA = "HR"
@@ -18,13 +24,24 @@ class CountryCode(str, enum.Enum):
     SLOVAKIA = "SK"
 
 
-class PlatformCode(str, enum.Enum):
+class PlatformCode(StrEnum):
     HEUREKA = "heu"
     OCS = "ocs"
     CENEJE = "cen"
 
 
-class CurrencyCode(str, enum.Enum):
+class StockInfo(StrEnum):
+    IN_STOCK = "IN_STOCK"
+    PREORDER = "PREORDER"
+    OUT_OF_STOCK = "OUT_OF_STOCK"
+
+
+class ShopCertificate(StrEnum):
+    BLUE = "BLUE"
+    GOLD = "GOLD"
+
+
+class CurrencyCode(StrEnum):
     BAM = "BAM"  # Bosnia and Herzegovina
     EUR = "EUR"  # Slovenia, Slovakia
     BGN = "BGN"  # Bulgaria
@@ -35,7 +52,7 @@ class CurrencyCode(str, enum.Enum):
     RSD = "RSD"  # Serbia
 
 
-class ProductStatus(str, enum.Enum):
+class ProductStatus(StrEnum):
     ENABLED = "ENABLED"
     VISIBLE = "VISIBLE"
     DISABLED = "DISABLED"
