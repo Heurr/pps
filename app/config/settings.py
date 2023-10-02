@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     @property
     def postgres_db_dsn(self) -> str:
-        return "postgresql+asyncpg://{}:{}@{}/{}".format(  # pylint: disable=consider-using-f-string
+        return "postgresql+asyncpg://{}:{}@{}/{}".format(
             self.POSTGRES_DB_USER,
             self.POSTGRES_DB_PASSWORD,
             self.POSTGRES_DB_HOST,

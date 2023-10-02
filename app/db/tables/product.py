@@ -5,7 +5,6 @@ from sqlalchemy import text
 from app.constants import COUNTRY_CODE_STRING_LENGTH, LOCAL_PRODUCT_ID_STRING_LENGTH
 from app.db.pg import sa_metadata
 
-
 product_table = sa.Table(
     "products",
     sa_metadata,

@@ -13,4 +13,3 @@ exec uvicorn \
     --log-level "${LOG_LEVEL}" \
     --factory \
     app.api_app:create_api_app
-

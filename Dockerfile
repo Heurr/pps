@@ -62,7 +62,8 @@ FROM python:3.11-slim as development
 RUN \
     apt-get update -y && \
     apt-get install -y netcat-openbsd vim curl gcc python3-dev && \
-    apt-get clean
+    apt-get clean && \
+    pip3 install pre-commit
 
 COPY --from=dependencies /opt/poetry /opt/poetry
 COPY --from=dependencies /usr/src/app /usr/src/app

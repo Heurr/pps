@@ -1,6 +1,6 @@
-class ApiException(Exception):
+class ApiError(Exception):
     pass
 
 
-class EntityNotFound(ApiException):
+class EntityNotFoundError(ApiError):
     pass

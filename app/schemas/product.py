@@ -4,9 +4,10 @@ from pendulum import DateTime
 from pydantic import Field
 
 from app.constants import (
-    CountryCode,
     LOCAL_PRODUCT_ID_STRING_LENGTH,
+    CountryCode,
 )
+
 from .base import BaseModel
 
 

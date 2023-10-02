@@ -4,13 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app import crud
 from app.constants import CountryCode
-
 from app.schemas.product import ProductCreateSchema, ProductDBSchema
+
 from .utils import (
-    random_int,
-    random_string,
     random_country_code,
+    random_int,
     random_one_id,
+    random_string,
 )
 
 
@@ -39,7 +39,5 @@ async def product_factory(
     name: str | None = None,
     version: int | None = None,
 ) -> ProductDBSchema:
-    product_in = await product_create_schema_factory(
-        **{k: v for k, v in locals().items()}
-    )
+    product_in = await product_create_schema_factory(**dict(locals().items()))
     return await crud.product.create(db_conn, product_in)

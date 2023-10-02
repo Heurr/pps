@@ -6,11 +6,14 @@ For more details see FIXME: Link to documentation
 
 For API documentation see FIXME: Backstage link to api
 
-## Code linting
+## Code linting and env setup
 
-- We use scripts to format/lint
-- Before running the scripts install `poetry` with `pip install poetry`
-- To run all formatters/linters run `make lint`
+- We use `ruff`, `black` and `mypy` to format/lint/check types together with `pre-commit`
+- Before making changes make sure to install pre-commit hooks with `make setup-pre-commit`
+- To run all formatters/linters manually run `make lint`
+- To enter `venv` with all dependencies installed run `make env`
+
+> **Note** There is also an option run the formatting scripts manually, they are found in `scripts` directory
 
 ## How to run
 
@@ -24,13 +27,15 @@ For API documentation see FIXME: Backstage link to api
 
 - We run tests in the app docker container
 - To run tests use `make test` this will run `pytest -v tests/` in the app container
-- To change testing flags use `make test TEST_ARGS="-vs"`
+- To change testing flags use `make test TA="-vs"`
 - Tests can also be run via the test script using `make test-script`
 
-
 ## DB Migrations
-- If a new table is created, make sure to import it in `db/alembic.py`. It allows to use alembic autogenerate functionality
-- When changes in database is done (for example creating a new table, add a new column), start an interactive session in the app container
+
+- If a new table is created, make sure to import it in `db/alembic.py`. It allows to use alembic autogenerate
+  functionality
+- When changes in database is done (for example creating a new table, add a new column), start an interactive session in
+  the app container
     ```shell
     make bash
     ```
@@ -42,6 +47,8 @@ For API documentation see FIXME: Backstage link to api
     ```shell
     alembic revision --autogenerate -m 'Your message'
     ```
-- New automatically generated migration can be found in `alembic/versions`. Check it, update it if it is needed and do not forget to add it into git
+- New automatically generated migration can be found in `alembic/versions`. Check it, update it if it is needed and do
+  not forget to add it into git
 
-> **Note**: A new file with the new migration is created by container so the owner of the file is usually root. For these reason it is necessary to change file owner
+> **Note**: A new file with the new migration is created by container so the owner of the file is usually root. For
+> these reason it is necessary to change file owner

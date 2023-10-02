@@ -3,9 +3,9 @@ from pathlib import Path
 
 import click
 import typer
-from alembic.config import Config as AlembicConfig
-from alembic import command as alembic_command
 
+from alembic import command as alembic_command
+from alembic.config import Config as AlembicConfig
 from app.utils.log import prepare_logging
 
 prepare_logging()

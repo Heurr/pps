@@ -5,7 +5,7 @@ import orjson
 from pendulum import DateTime
 from pydantic import BaseModel
 
-from app.constants import CountryCode, PlatformCode, COUNTRY_PLATFORM_MAP
+from app.constants import COUNTRY_PLATFORM_MAP, CountryCode, PlatformCode
 
 
 def utc_now() -> DateTime:

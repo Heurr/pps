@@ -1,11 +1,11 @@
-.python-lint:
+.lint:
   stage: lint
   tags:
     - gcp
     - prod
   image:
     name: "$IMAGE_REPOSITORY:$IMAGE_TAG"
-    entrypoint: [""]
+    entrypoint: [ "" ]
   needs:
     - build-dev
   only:
@@ -14,17 +14,13 @@
   except:
     - master
 
-
-python-conventions:
-  extends: .python-lint
+pre-commit:
+  extends: .lint
+  stage: lint
+  before_script:
+    - apt update && apt install -y git
   script:
-    - scripts/conventions.sh
-
-
-python-types:
-  extends: .python-lint
-  script:
-    - scripts/types.sh
+    - pre-commit run --all-files
 
 
 #lint-helm:

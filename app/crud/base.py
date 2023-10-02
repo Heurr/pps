@@ -3,14 +3,16 @@ from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
-from sqlalchemy import Column, Table, and_ as sa_and, text as sa_text, bindparam, JSON
-from sqlalchemy.sql.elements import Label
-from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy import JSON, Column, Table, bindparam
+from sqlalchemy import and_ as sa_and
+from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import Range
+from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy.sql.elements import Label
 from sqlalchemy_utils import Ltree
 
 from app.constants import CountryCode
-from app.utils import utc_now, dump_to_json
+from app.utils import dump_to_json, utc_now
 
 DBSchemaTypeT = TypeVar("DBSchemaTypeT", bound=BaseModel)
 CreateSchemaTypeT = TypeVar("CreateSchemaTypeT", bound=BaseModel)
@@ -20,7 +22,7 @@ json_encoder = {Ltree: lambda v: v, Range: lambda v: v}
 
 
 class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self,
         table: Table,
         db_scheme: Type[DBSchemaTypeT],
@@ -103,7 +105,7 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
     ) -> set[UUID]:
         stmt = self.table.select().where(self.table.c.id.in_(uuids))
         res = await db_conn.execute(stmt)
-        return set(r.id for r in res)
+        return {r.id for r in res}
 
     async def create(
         self, db_conn: AsyncConnection, obj_in: CreateSchemaTypeT

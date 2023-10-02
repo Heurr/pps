@@ -4,16 +4,16 @@ import pytest
 
 from app import crud
 from app.schemas.product import (
-    ProductDBSchema,
     ProductCreateSchema,
+    ProductDBSchema,
     ProductUpdateSchema,
 )
 
 from ..factories import (
-    product_factory,
     product_create_schema_factory,
+    product_factory,
 )
-from ..utils import random_string, random_int, random_one_id, random_country_code
+from ..utils import random_country_code, random_int, random_one_id, random_string
 
 
 @pytest.fixture
