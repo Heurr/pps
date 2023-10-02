@@ -1,28 +1,28 @@
-from uuid import UUID
 import logging
+from uuid import UUID
 
 from asyncpg.exceptions import (
+    DataError,
     InterfaceError,
     TransactionRollbackError,
-    DataError,
 )
-from sqlalchemy import text as sa_text, bindparam, JSON
+from sqlalchemy import JSON, bindparam
+from sqlalchemy import text as sa_text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.db.tables.product import product_table
 from app.schemas.product import (
     ProductCreateSchema,
-    ProductUpdateSchema,
     ProductDBSchema,
+    ProductUpdateSchema,
 )
 from app.utils.sentry import set_sentry_context
-from .base import CRUDBase
 
+from .base import CRUDBase
 
 logger = logging.getLogger(__name__)
 
 
-# pylint: disable=consider-using-f-string
 class CRUDProduct(CRUDBase[ProductDBSchema, ProductCreateSchema, ProductUpdateSchema]):
     async def create_many_or_do_nothing(
         self, db_conn: AsyncConnection, entities: list[ProductCreateSchema]

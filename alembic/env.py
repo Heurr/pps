@@ -1,7 +1,4 @@
-from logging.config import fileConfig
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
@@ -11,12 +8,13 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-#if config.config_file_name is not None:
+# if config.config_file_name is not None:
 #    fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
 from app.db.alembic import sa_metadata
+
 target_metadata = sa_metadata
 
 # other values from the config, defined by the needs of env.py,
@@ -27,7 +25,8 @@ target_metadata = sa_metadata
 
 def _get_database_url():
     from app.config.settings import base_settings
-    return base_settings.postgres_db_dsn.replace('+asyncpg', '', 1)
+
+    return base_settings.postgres_db_dsn.replace("+asyncpg", "", 1)
 
 
 def run_migrations_offline(url) -> None:

@@ -34,7 +34,7 @@ async def liveness() -> HealthcheckStatus:
     tags=["healthcheck"],
 )
 async def readiness(
-    db_conn: AsyncConnection = Depends(get_db_conn),
+    db_conn: AsyncConnection = Depends(get_db_conn),  # noqa
 ) -> HealthcheckStatus:
     postgres_version = (await db_conn.execute(sa_text("SELECT VERSION()"))).scalar()
     return HealthcheckStatus(

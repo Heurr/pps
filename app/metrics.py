@@ -82,11 +82,12 @@ def start_prometheus_server():
     try:
         prometheus_client.start_http_server(base_settings.PROMETHEUS_PORT)
         logging.info(
-            f"Prometheus metrics server started at {base_settings.PROMETHEUS_PORT}"
+            "Prometheus metrics server started at %s", base_settings.PROMETHEUS_PORT
         )
     except OSError as e:
-        # Silently exit if the port is already in use (the prometheus server is already running)
-        if e.errno != 98:
+        # Silently exit if the port is already in use
+        # (the prometheus server is already running)
+        if e.errno != 98:  # noqa
             raise e
 
 

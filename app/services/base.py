@@ -6,12 +6,12 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.crud.base import (
+    CreateSchemaTypeT,
     CRUDBase,
     DBSchemaTypeT,
-    CreateSchemaTypeT,
     UpdateSchemaTypeT,
 )
-from app.exceptions import EntityNotFound
+from app.exceptions import EntityNotFoundError
 
 CRUDTypeT = TypeVar("CRUDTypeT", bound=CRUDBase)
 RabbitMessageSchemeT = TypeVar("RabbitMessageSchemeT", bound=BaseModel)
@@ -59,7 +59,7 @@ class BaseService(
     async def remove_or_not_found(self, db_conn: AsyncConnection, obj_id: UUID) -> UUID:
         res_id = await self.crud.remove_by_id(db_conn, obj_id)
         if res_id is None:
-            raise EntityNotFound(
+            raise EntityNotFoundError(
                 f"{self.entity_name} with id '{obj_id}' could not be deleted. "
                 f"{self.entity_name} does not exist."
             )

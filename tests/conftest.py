@@ -2,17 +2,16 @@ from pathlib import Path
 from typing import Any, AsyncGenerator
 
 import pytest
-from alembic import command as alembic_command
-from alembic.config import Config as AlembicConfig
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 
+from alembic import command as alembic_command
+from alembic.config import Config as AlembicConfig
 from app.api.deps import get_db_conn
 from app.api_app import create_api_app
 from app.config.settings import base_settings
 from app.db.pg import drop_db_tables
 from app.utils import dump_to_json
-
 
 # pytestmark = pytest.mark.anyio
 
