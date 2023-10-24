@@ -13,15 +13,15 @@ class PriceType(StrEnum):
 
 
 class CountryCode(StrEnum):
-    BOSNIA_AND_HERZEGOVINA = "BA"
-    BULGARIA = "BG"
-    CROATIA = "HR"
-    CZECH = "CZ"
-    HUNGARY = "HU"
-    ROMANIA = "RO"
-    SERBIA = "RS"
-    SLOVENIA = "SI"
-    SLOVAKIA = "SK"
+    BA = "BA"  # BOSNIA_AND_HERZEGOVINA
+    BG = "BG"  # BULGARIA
+    HR = "HR"  # CROATIA
+    CZ = "CZ"  # CZECH
+    HU = "HU"  # HUNGARY
+    RO = "RO"  # ROMANIA
+    RS = "RS"  # SERBIA
+    SI = "SI"  # SLOVENIA
+    SK = "SK"  # SLOVAKIA
 
 
 class PlatformCode(StrEnum):
@@ -58,15 +58,27 @@ class ProductStatus(StrEnum):
     DISABLED = "DISABLED"
 
 
+class ProductPriceType(StrEnum):
+    ALL_OFFERS = "ALL_OFFERS"
+    MARKETPLACE = "MARKETPLACE"
+    IN_STOCK = "IN_STOCK"
+    IN_STOCK_CERTIFIED = "IN_STOCK_CERTIFIED"
+
+
+class Entity(StrEnum):
+    SHOP = "shop"
+    OFFER = "offer"
+    BUYABLE = "buyable"
+    AVAILABILITY = "availability"
+    PRODUCT_DISCOUNT = "product-discount"
+    PRODUCT_PRICE = "product-price"
+    PRODUCT_PRICE_HISTORY = "product-price-history"
+
+
 PLATFORM_COUNTRY_MAP = {
-    PlatformCode.HEUREKA: [CountryCode.CZECH, CountryCode.SLOVAKIA],
-    PlatformCode.OCS: [CountryCode.BULGARIA, CountryCode.HUNGARY, CountryCode.ROMANIA],
-    PlatformCode.CENEJE: [
-        CountryCode.BOSNIA_AND_HERZEGOVINA,
-        CountryCode.CROATIA,
-        CountryCode.SERBIA,
-        CountryCode.SLOVENIA,
-    ],
+    PlatformCode.HEUREKA: [CountryCode.CZ, CountryCode.SK],
+    PlatformCode.OCS: [CountryCode.BG, CountryCode.HU, CountryCode.RO],
+    PlatformCode.CENEJE: [CountryCode.BA, CountryCode.HR, CountryCode.RS, CountryCode.SI],
 }
 COUNTRY_PLATFORM_MAP = {
     country: platform
@@ -75,5 +87,7 @@ COUNTRY_PLATFORM_MAP = {
 }
 
 
-COUNTRY_CODE_STRING_LENGTH = 2
-LOCAL_PRODUCT_ID_STRING_LENGTH = 32
+PRICE_PRECISION = 12
+PRICE_SCALE = 2
+DISCOUNT_PRECISION = 5
+DISCOUNT_SCALE = 2

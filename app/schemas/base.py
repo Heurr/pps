@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from pendulum import DateTime
 from pydantic import BaseModel as _BaseModel
 
 
@@ -14,3 +15,11 @@ class BaseIdModel(BaseModel):
 
 class BaseMessageModel(BaseIdModel):
     version: int
+
+
+class BaseDBSchema(BaseModel):
+    created_at: DateTime
+    updated_at: DateTime
+
+    class Config:
+        orm_mode = True
