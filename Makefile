@@ -3,6 +3,7 @@ help: # Show help for each of the Makefile recipes
 	@grep -E '^[a-zA-Z0-9 -]+:.*#'  Makefile | sort | while read -r l; do printf "\033[1;32m$$(echo $$l | cut -f 1 -d':')\033[00m: $$(echo $$l | cut -f 2- -d'#')\n"; done
 
 DOCKER_ID ?= price-services-api-1
+DOCKER_DB_ID ?= price-services-db-1
 TA ?= -v tests/
 
 setup-pre-commit: # Setup pre-commit in the current env
@@ -32,8 +33,11 @@ test: # Run tests in project, optionally set DOCKER_ID for docker name and TEST_
 test-script: # Run tests using a test script
 	docker exec -it $(DOCKER_ID) scripts/tests.sh
 
-bash: # Start an interactive session with the project
+bash: # Start an interactive session with the api container
 	docker exec -it $(DOCKER_ID) bash
+
+db: # Connect to db with pgcli
+	pgcli postgresql://api-user:alpharius@localhost:5434/price-services
 
 lint: # Run the every linting script and a format script
 	pre-commit run --all-files

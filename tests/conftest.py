@@ -27,7 +27,7 @@ async def db_engine() -> AsyncGenerator[AsyncEngine, Any]:
         base_settings.postgres_db_dsn,
         json_serializer=dump_to_json,
     )
-    await drop_db_tables(engine)
+    # await drop_db_tables(engine)
 
     alembic_config_path = Path(__name__).absolute().parent / "alembic.ini"
     alembic_command.upgrade(AlembicConfig(str(alembic_config_path)), "head")

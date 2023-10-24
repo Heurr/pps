@@ -53,11 +53,17 @@ def get_all_table_names_select() -> sa.sql.Select:
     )
 
 
+def custom_types() -> list[str]:
+    return ["currencycode", "countrycode", "productpricetype"]
+
+
 async def drop_db_tables(engine: AsyncEngine) -> None:
     async with engine.begin() as db_conn:
         for table in await db_conn.execute(get_all_table_names_select()):
             stmt = sa.text(f"DROP TABLE {table.name} CASCADE")
             await db_conn.execute(stmt)
+        for type_name in custom_types():
+            await db_conn.execute(sa.text(f"DROP TYPE {type_name} CASCADE"))
 
 
 async def truncate_db(engine: AsyncEngine) -> None:
