@@ -1,9 +1,8 @@
-from app.constants import CountryCode, CurrencyCode, ProductPriceType
-from app.schemas.base import BaseDBSchema, BaseIdModel
+from app.constants import CurrencyCode, ProductPriceType
+from app.schemas.base import BaseIdCountryModel, BaseModel, DBBaseIdCountryModel
 
 
-class ProductPriceBaseSchema(BaseIdModel):
-    country_code: CountryCode
+class ProductPriceBaseSchema(BaseModel):
     currency_code: CurrencyCode
     max_price: float
     min_price: float
@@ -12,8 +11,7 @@ class ProductPriceBaseSchema(BaseIdModel):
     version: int
 
 
-class ProductPriceUpdateSchema(BaseIdModel):
-    country_code: CountryCode | None = None
+class ProductPriceUpdateSchema(BaseIdCountryModel):
     currency_code: CurrencyCode | None = None
     max_price: float | None = None
     min_price: float | None = None
@@ -22,9 +20,9 @@ class ProductPriceUpdateSchema(BaseIdModel):
     version: int | None = None
 
 
-class ProductPriceCreateSchema(ProductPriceBaseSchema):
+class ProductPriceCreateSchema(ProductPriceBaseSchema, BaseIdCountryModel):
     pass
 
 
-class ProductPriceDBSchema(ProductPriceBaseSchema, BaseDBSchema):
+class ProductPriceDBSchema(ProductPriceBaseSchema, DBBaseIdCountryModel):
     pass

@@ -1,4 +1,5 @@
 import logging
+import re
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -60,6 +61,10 @@ def custom_types() -> list[str]:
 async def drop_db_tables(engine: AsyncEngine) -> None:
     async with engine.begin() as db_conn:
         for table in await db_conn.execute(get_all_table_names_select()):
+            # Don't delete partition tables since deleting the product_prices_history
+            # table deletes all partition tables
+            if bool(re.search(r"\d", table.name)):
+                continue
             stmt = sa.text(f"DROP TABLE {table.name} CASCADE")
             await db_conn.execute(stmt)
         for type_name in custom_types():
@@ -74,3 +79,30 @@ async def truncate_db(engine: AsyncEngine) -> None:
 
             stmt = sa.text(f"TRUNCATE {table.name} RESTART IDENTITY CASCADE")
             await db_conn.execute(stmt)
+
+
+def generate_create_partition_table_sql(year: int, month: int) -> str:
+    second_year = year
+    month_from = "{month:02}".format(month=month)
+    if month < 12:  # noqa
+        month_to = "{month:02}".format(month=month + 1)
+    else:
+        # Do this when start date is in old year and end date is in new year
+        month_to = "{month:02}".format(month=1)
+        second_year = year + 1
+    return (
+        "CREATE TABLE product_prices_history_{first_year}_{month_from} PARTITION OF "
+        "product_prices_history FOR VALUES FROM ('{first_year}-{month_from}-01') TO "
+        "('{second_year}-{month_to}-01')"
+    ).format(
+        month_from=month_from,
+        month_to=month_to,
+        first_year=year,
+        second_year=second_year,
+    )
+
+
+def generate_drop_partition_table_sql(year: int, month: int) -> str:
+    return "DROP TABLE product_prices_history_{year}_{month:02}".format(
+        year=year, month=month
+    )

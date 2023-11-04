@@ -17,6 +17,6 @@ product_discount_table = sa.Table(
     sa.Column("discount", sa.Numeric(DISCOUNT_PRECISION, DISCOUNT_SCALE), nullable=False),
     sa.Column("price_type", sa.Enum(ProductPriceType), nullable=False),
     sa.Column("version", sa.BigInteger, nullable=False),
-    sa.Column("created_at", sa.DateTime(), nullable=False),
-    sa.Column("updated_at", sa.DateTime(), nullable=False),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
 )

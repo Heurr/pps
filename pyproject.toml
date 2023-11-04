@@ -68,6 +68,12 @@ max-args = 7
     "ARG001", # unused-function-argument
     "PLR2004"  # magic-value-comparison
 ]
+"tests/factories.py" = [
+    "PLR0913",  # too-many-arguments
+]
+"app/crud/*" = [
+    "E501"  # line-too-long
+]
 "alembic/*" = ["E402", "E501"]  # module-import-not-at-top-of-file, line-too-long
 
 

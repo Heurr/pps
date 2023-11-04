@@ -22,6 +22,7 @@ For API documentation see FIXME: Backstage link to api
 - Run the docker image in a container with `make up` or use `make up-d` to run in the background
 - To shut down the container run `make stop`
 - To enter the running container with a bash prompt use `make bash`
+- To access the local database run `make db`
 
 ## How to run tests
 

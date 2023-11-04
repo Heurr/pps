@@ -22,7 +22,7 @@ product_price_history_table = sa.Table(
     sa.Column("price_type", sa.Enum(ProductPriceType), nullable=False),
     sa.Column("date", sa.Date(), primary_key=True),
     sa.Column("version", sa.BigInteger, nullable=False),
-    sa.Column("created_at", sa.DateTime(), nullable=False),
-    sa.Column("updated_at", sa.DateTime(), nullable=False),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     postgresql_partition_by="RANGE (date)",
 )

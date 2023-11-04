@@ -14,7 +14,7 @@ offer_table = sa.Table(
     sa.Column("currency_code", sa.Enum(CurrencyCode), nullable=False),
     sa.Column("amount", sa.Numeric(PRICE_PRECISION, PRICE_SCALE), nullable=False),
     sa.Column("version", sa.BigInteger, nullable=False),
-    sa.Column("created_at", sa.DateTime(), nullable=False),
-    sa.Column("updated_at", sa.DateTime(), nullable=False),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     # TODO: index for country and id together
 )

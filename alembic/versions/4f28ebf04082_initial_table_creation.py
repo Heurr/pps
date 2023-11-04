@@ -23,8 +23,8 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("in_stock", sa.Boolean(), server_default="False", nullable=False),
         sa.Column("version", sa.BigInteger(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_availabilities")),
     )
     op.create_table(
@@ -32,8 +32,8 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("buyable", sa.Boolean(), server_default="False", nullable=False),
         sa.Column("version", sa.BigInteger(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_buyables")),
     )
     op.create_table(
@@ -65,8 +65,8 @@ def upgrade() -> None:
         ),
         sa.Column("amount", sa.Numeric(precision=12, scale=2), nullable=False),
         sa.Column("version", sa.BigInteger(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_offers")),
     )
     op.create_index(
@@ -96,8 +96,8 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("version", sa.BigInteger(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id", "country_code", name=op.f("pk_product_discounts")),
     )
     op.create_table(
@@ -140,8 +140,8 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("version", sa.BigInteger(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id", "country_code", name=op.f("pk_product_prices")),
     )
     op.create_table(
@@ -185,8 +185,8 @@ def upgrade() -> None:
         ),
         sa.Column("date", sa.Date(), nullable=False),
         sa.Column("version", sa.BigInteger(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint(
             "id", "country_code", "date", name=op.f("pk_product_prices_history")
         ),
@@ -200,8 +200,8 @@ def upgrade() -> None:
         sa.Column("paying", sa.Boolean(), server_default="False", nullable=False),
         sa.Column("enabled", sa.Boolean(), server_default="False", nullable=False),
         sa.Column("version", sa.BigInteger(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_shops")),
     )
     # ### end Alembic commands ###

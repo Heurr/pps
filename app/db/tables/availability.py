@@ -9,6 +9,6 @@ availability_table = sa.Table(
     sa.Column("id", sa_pg.UUID, primary_key=True),
     sa.Column("in_stock", sa.Boolean, nullable=False, server_default="False"),
     sa.Column("version", sa.BigInteger, nullable=False),
-    sa.Column("created_at", sa.DateTime(), nullable=False),
-    sa.Column("updated_at", sa.DateTime(), nullable=False),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
 )
