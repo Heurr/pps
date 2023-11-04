@@ -1,26 +1,22 @@
-from app.constants import CountryCode, CurrencyCode, ProductPriceType
-from app.schemas.base import BaseDBSchema, BaseIdModel
+from app.constants import ProductPriceType
+from app.schemas.base import BaseIdCountryModel, BaseModel, DBBaseIdCountryModel
 
 
-class ProductDiscountBaseSchema(BaseIdModel):
-    country_code: CountryCode
-    currency_code: CurrencyCode
+class ProductDiscountBaseSchema(BaseModel):
     discount: float
     price_type: ProductPriceType
     version: int
 
 
-class ProductDiscountUpdateSchema(BaseIdModel):
-    country_code: CountryCode | None = None
-    currency_code: CurrencyCode | None = None
+class ProductDiscountUpdateSchema(BaseIdCountryModel):
     discount: float | None = None
     price_type: ProductPriceType | None = None
     version: int | None = None
 
 
-class ProductDiscountCreateSchema(ProductDiscountBaseSchema):
+class ProductDiscountCreateSchema(ProductDiscountBaseSchema, BaseIdCountryModel):
     pass
 
 
-class ProductDiscountDBSchema(ProductDiscountBaseSchema, BaseDBSchema):
+class ProductDiscountDBSchema(ProductDiscountBaseSchema, DBBaseIdCountryModel):
     pass

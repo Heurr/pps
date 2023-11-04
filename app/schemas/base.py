@@ -3,6 +3,8 @@ from uuid import UUID
 from pendulum import DateTime
 from pydantic import BaseModel as _BaseModel
 
+from app.constants import CountryCode
+
 
 class BaseModel(_BaseModel):
     def __hash__(self):
@@ -23,3 +25,11 @@ class BaseDBSchema(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class BaseIdCountryModel(BaseIdModel):
+    country_code: CountryCode
+
+
+class DBBaseIdCountryModel(BaseIdCountryModel, BaseDBSchema):
+    pass

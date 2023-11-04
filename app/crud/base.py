@@ -1,27 +1,28 @@
+from datetime import date
 from typing import Callable, Generic, Type, TypeVar
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
+from pendulum import Date
 from pydantic import BaseModel
-from sqlalchemy import JSON, Column, Table, bindparam
-from sqlalchemy import and_ as sa_and
+from sqlalchemy import Table
 from sqlalchemy import text as sa_text
-from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.sql.elements import Label
-from sqlalchemy_utils import Ltree
 
-from app.constants import CountryCode
+from app.types import IdCountryDatePk, IdCountryPk
 from app.utils import dump_to_json, utc_now
 
 DBSchemaTypeT = TypeVar("DBSchemaTypeT", bound=BaseModel)
 CreateSchemaTypeT = TypeVar("CreateSchemaTypeT", bound=BaseModel)
 UpdateSchemaTypeT = TypeVar("UpdateSchemaTypeT", bound=BaseModel)
+PkT = TypeVar("PkT", UUID, IdCountryPk, IdCountryDatePk)
 
-json_encoder = {Ltree: lambda v: v, Range: lambda v: v}
+
+json_encoder = {Date: lambda v: v, date: lambda v: v}
 
 
-class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
+class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]):
     def __init__(
         self,
         table: Table,
@@ -29,7 +30,6 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
         create_scheme: Type[CreateSchemaTypeT],
         update_scheme: Type[UpdateSchemaTypeT],
         custom_encoder: dict[str, Callable] | None = None,
-        local_id_column: Column | None = None,
     ):
         self.table = table
         self.db_scheme = db_scheme
@@ -37,14 +37,20 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
         self.update_scheme = update_scheme
         self.custom_encoder = json_encoder.copy()
         self.custom_encoder.update(custom_encoder or {})  # type: ignore
-        self.local_id_column = local_id_column
         self.has_updated_at = "updated_at" in self.table.c
 
     @staticmethod
     def prefixed_columns(table: Table) -> list[Label]:
         return [c.label(f"{table.name}_{c.name}") for c in table.columns]
 
-    async def get(self, db_conn: AsyncConnection, obj_id: UUID) -> DBSchemaTypeT | None:
+    async def get(self, db_conn: AsyncConnection, obj_id: PkT) -> DBSchemaTypeT | None:
+        """
+        Get one row table
+
+        :param db_conn: Database connection
+        :param obj_id: ID of primary keys of the object to get
+        :return: If found the object corresponding to the id, else nothing
+        """
         stmt = self.table.select().where(self.table.c.id == obj_id)
         row = (await db_conn.execute(stmt)).one_or_none()
         return self.db_scheme.from_orm(row) if row else None
@@ -52,64 +58,56 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
     async def get_many(
         self, db_conn: AsyncConnection, *, skip: int = 0, limit: int = 100
     ) -> list[DBSchemaTypeT]:
+        """
+        Get many rows from db based on limit and offset
+
+        :param db_conn: Database connection
+        :param skip: Offset
+        :param limit: Limit to return
+        :return: List of rows
+        """
         stmt = self.table.select().offset(skip).limit(limit)
         rows = await db_conn.execute(stmt)
         return [self.db_scheme.from_orm(row) for row in rows]
 
     async def get_in(
-        self, db_conn: AsyncConnection, obj_ids: list[UUID]
+        self, db_conn: AsyncConnection, obj_ids: list[PkT]
     ) -> list[DBSchemaTypeT]:
+        """
+        Get all rows matching provided ids
+
+        :param db_conn: Database connection
+        :param obj_ids: List of UUIDs to get
+        :return: List of rows
+        """
         stmt = self.table.select().where(self.table.c.id.in_(obj_ids))
         rows = await db_conn.execute(stmt)
         return [self.db_scheme.from_orm(row) for row in rows]
 
-    async def get_by_local_keys(
-        self, db_conn: AsyncConnection, local_id, country: CountryCode
-    ) -> DBSchemaTypeT | None:
-        stmt = self.table.select().where(
-            sa_and(
-                self.local_id_column == local_id,
-                self.table.c.country == country,
-            )
-        )
-        row = (await db_conn.execute(stmt)).one_or_none()
-        return self.db_scheme.from_orm(row) if row else None
-
-    async def get_local_key_mapping(
-        self, db_conn: AsyncConnection, local_keys: list[tuple[str, CountryCode]]
-    ) -> dict[tuple[str, CountryCode], UUID]:
-        stmt = sa_text(
-            """
-            SELECT id, {table}.{local_id}, {table}.country
-            FROM {table}
-            JOIN (
-                SELECT
-                    (value->>0)::varchar AS {local_id},
-                    (value->>1)::varchar AS country
-                FROM json_array_elements(:json_data)
-            ) local_ids
-            ON {table}.{local_id} = local_ids.{local_id}
-            AND {table}.country = local_ids.country
-        """.format(
-                table=self.table.name,
-                local_id=self.local_id_column.name,  # type: ignore[union-attr]
-            )
-        ).bindparams(bindparam("json_data", value=local_keys, type_=JSON))
-
-        res = await db_conn.execute(stmt)
-        local_key_mapping = {(r[1], CountryCode(r[2])): r[0] for r in res}
-        return local_key_mapping
-
     async def find_existing_ids(
-        self, db_conn: AsyncConnection, uuids: list[UUID]
-    ) -> set[UUID]:
-        stmt = self.table.select().where(self.table.c.id.in_(uuids))
+        self, db_conn: AsyncConnection, pks: list[PkT]
+    ) -> set[PkT]:
+        """
+        Get IDs of rows that match provided IDs
+
+        :param db_conn: Database connection
+        :param pks: UUIDs to find
+        :return: A subset of provided IDs that were found in db
+        """
+        stmt = self.table.select().where(self.table.c.id.in_(pks))
         res = await db_conn.execute(stmt)
         return {r.id for r in res}
 
     async def create(
         self, db_conn: AsyncConnection, obj_in: CreateSchemaTypeT
     ) -> DBSchemaTypeT:
+        """
+        Create one row using provided object
+
+        :param db_conn: Database connection
+        :param obj_in: Object to create
+        :return: Created object
+        """
         values = jsonable_encoder(obj_in, custom_encoder=self.custom_encoder)
         values["created_at"] = utc_now()
         if self.has_updated_at:
@@ -122,6 +120,13 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
     async def create_many(
         self, db_conn: AsyncConnection, objs_in: list[CreateSchemaTypeT]
     ) -> None:
+        """
+        Create many rows using provided object
+
+        :param db_conn: Database connection
+        :param objs_in: Objects to create
+        :return: Nothing
+        """
         now = utc_now()
         all_values = [
             jsonable_encoder(obj_in, custom_encoder=self.custom_encoder)
@@ -138,9 +143,16 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
     async def update(
         self, db_conn: AsyncConnection, obj_in: UpdateSchemaTypeT
     ) -> DBSchemaTypeT:
+        """
+        Update one row using object
+
+        :param db_conn: Database connection
+        :param obj_in: Object to update with
+        :return: The updated object in db
+        """
         values = jsonable_encoder(
             obj_in,
-            exclude={"id", self.local_id_column},  # type: ignore[arg-type]
+            exclude={"id"},
             exclude_unset=True,
             custom_encoder=self.custom_encoder,
         )
@@ -153,25 +165,24 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
         row = (await db_conn.execute(stmt)).one()
         return self.db_scheme.from_orm(row)
 
-    async def create_or_update_many(self, db_conn: AsyncConnection) -> None:
-        pass
+    async def upsert_many_with_version_checking(  # type: ignore[empty-body]
+        self,
+        db_conn: AsyncConnection,
+        entities: list[CreateSchemaTypeT | UpdateSchemaTypeT],
+    ) -> list[PkT]:
+        """
+        Create many rows using Common Table Expression (CTE) or update while version checking
+        specific for each CRUD
 
-    async def create_many_or_do_nothing(  # type: ignore[empty-body]
-        self, db_conn: AsyncConnection, entities: list[CreateSchemaTypeT]
-    ) -> list[UUID]:
-        pass
+        :param db_conn: Database connection
+        :param entities: List of entities to be upserted
+        :return: List of primary keys, can return tuples if table has composite primary key
+        """
 
-    async def update_many(  # type: ignore[empty-body]
-        self, db_conn: AsyncConnection, entities: list[UpdateSchemaTypeT]
-    ) -> list[UUID]:
-        pass
-
-    async def remove(
-        self, db_conn: AsyncConnection, db_obj: DBSchemaTypeT
-    ) -> UUID | None:
+    async def remove(self, db_conn: AsyncConnection, db_obj: DBSchemaTypeT) -> PkT | None:
         return await self.remove_by_id(db_conn, db_obj.id)  # type: ignore[attr-defined]
 
-    async def remove_by_id(self, db_conn: AsyncConnection, obj_id: UUID) -> UUID | None:
+    async def remove_by_id(self, db_conn: AsyncConnection, obj_id: PkT) -> PkT | None:
         stmt = (
             self.table.delete()
             .where(self.table.c.id == obj_id)
@@ -181,8 +192,15 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
         return res
 
     async def remove_many_with_version_checking(
-        self, db_conn: AsyncConnection, ids_versions: list[tuple[UUID, int]]
-    ) -> list[UUID]:
+        self, db_conn: AsyncConnection, ids_versions: list[tuple[PkT, int]]
+    ) -> list[PkT]:
+        """
+        Only remove rows with version bigger then old version
+
+        :param db_conn: Database connection
+        :param ids_versions: Tuple of primary keys and versions corresponding to the primary key
+        :return: IDs of deleted rows
+        """
         ids_versions.sort(key=lambda item: item[0])
         json_data = dump_to_json(ids_versions)
 
@@ -203,9 +221,3 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
         res = await db_conn.execute(stmt)
         deleted_ids = [r.id for r in res]
         return deleted_ids
-
-    @staticmethod
-    def sort_entities_by_id(
-        entities: list[CreateSchemaTypeT] | list[UpdateSchemaTypeT],
-    ) -> None:
-        entities.sort(key=lambda e: e.id)  # type: ignore[attr-defined]

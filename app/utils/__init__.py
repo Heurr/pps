@@ -2,14 +2,14 @@ from typing import Any
 from uuid import UUID
 
 import orjson
-from pendulum import DateTime
+from pendulum import DateTime, now
 from pydantic import BaseModel
 
 from app.constants import COUNTRY_PLATFORM_MAP, CountryCode, PlatformCode
 
 
 def utc_now() -> DateTime:
-    return DateTime.utcnow()
+    return now()
 
 
 def version_now() -> int:
