@@ -5,7 +5,6 @@ from contextlib import asynccontextmanager
 from typing import Any, TypeVar
 from uuid import UUID, uuid4
 
-from pendulum import Date, today
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.constants import CountryCode, CurrencyCode, ProductPriceType
@@ -49,10 +48,6 @@ def random_product_price_type() -> ProductPriceType:
 
 def random_one_id() -> UUID:
     return uuid4()
-
-
-def date_now() -> Date:
-    return today().date()
 
 
 def override_obj_get_db_conn(db_conn: AsyncConnection, obj: Any) -> Any:

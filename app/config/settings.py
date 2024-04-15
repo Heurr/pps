@@ -1,4 +1,4 @@
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.constants import LogFormatType
 
@@ -30,8 +30,7 @@ class Settings(BaseSettings):
     def is_dev(self) -> bool:
         return self.APP_ENV.lower() == "dev"
 
-    class Config:
-        env_prefix = "PS_"
+    model_config = SettingsConfigDict(env_prefix="PS_")
 
 
 class ApiSettings(Settings):
@@ -47,8 +46,7 @@ class LogSettings(BaseSettings):
     LOG_LEVEL: str = "info"
     LOG_FORMAT: LogFormatType = LogFormatType.DEFAULT
 
-    class Config:
-        env_prefix = "PS_"
+    model_config = SettingsConfigDict(env_prefix="PS_")
 
 
 base_settings = Settings()

@@ -1,7 +1,8 @@
+from datetime import datetime
 from uuid import UUID
 
-from pendulum import DateTime
 from pydantic import BaseModel as _BaseModel
+from pydantic import ConfigDict
 
 from app.constants import CountryCode
 
@@ -20,11 +21,11 @@ class BaseMessageModel(BaseIdModel):
 
 
 class BaseDBSchema(BaseModel):
-    created_at: DateTime
-    updated_at: DateTime
+    created_at: datetime
+    updated_at: datetime
 
-    class Config:
-        orm_mode = True
+    # TODO check if needed
+    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
 
 
 class BaseIdCountryModel(BaseIdModel):

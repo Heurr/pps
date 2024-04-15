@@ -1,9 +1,6 @@
-from datetime import date
-from typing import Callable, Generic, Type, TypeVar
+from typing import Generic, Type, TypeVar
 from uuid import UUID
 
-from fastapi.encoders import jsonable_encoder
-from pendulum import Date
 from pydantic import BaseModel
 from sqlalchemy import Table
 from sqlalchemy import text as sa_text
@@ -19,9 +16,6 @@ UpdateSchemaTypeT = TypeVar("UpdateSchemaTypeT", bound=BaseModel)
 PkT = TypeVar("PkT", UUID, IdCountryPk, IdCountryDatePk)
 
 
-json_encoder = {Date: lambda v: v, date: lambda v: v}
-
-
 class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]):
     def __init__(
         self,
@@ -29,14 +23,11 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
         db_scheme: Type[DBSchemaTypeT],
         create_scheme: Type[CreateSchemaTypeT],
         update_scheme: Type[UpdateSchemaTypeT],
-        custom_encoder: dict[str, Callable] | None = None,
     ):
         self.table = table
         self.db_scheme = db_scheme
         self.create_scheme = create_scheme
         self.update_scheme = update_scheme
-        self.custom_encoder = json_encoder.copy()
-        self.custom_encoder.update(custom_encoder or {})  # type: ignore
         self.has_updated_at = "updated_at" in self.table.c
 
     @staticmethod
@@ -53,7 +44,7 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
         """
         stmt = self.table.select().where(self.table.c.id == obj_id)
         row = (await db_conn.execute(stmt)).one_or_none()
-        return self.db_scheme.from_orm(row) if row else None
+        return self.db_scheme.model_validate(row) if row else None
 
     async def get_many(
         self, db_conn: AsyncConnection, *, skip: int = 0, limit: int = 100
@@ -68,7 +59,7 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
         """
         stmt = self.table.select().offset(skip).limit(limit)
         rows = await db_conn.execute(stmt)
-        return [self.db_scheme.from_orm(row) for row in rows]
+        return [self.db_scheme.model_validate(row) for row in rows]
 
     async def get_in(
         self, db_conn: AsyncConnection, obj_ids: list[PkT]
@@ -82,7 +73,7 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
         """
         stmt = self.table.select().where(self.table.c.id.in_(obj_ids))
         rows = await db_conn.execute(stmt)
-        return [self.db_scheme.from_orm(row) for row in rows]
+        return [self.db_scheme.model_validate(row) for row in rows]
 
     async def find_existing_ids(
         self, db_conn: AsyncConnection, pks: list[PkT]
@@ -108,14 +99,15 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
         :param obj_in: Object to create
         :return: Created object
         """
-        values = jsonable_encoder(obj_in, custom_encoder=self.custom_encoder)
+        values = obj_in.model_dump()
+
         values["created_at"] = utc_now()
         if self.has_updated_at:
             values["updated_at"] = values["created_at"]
 
         stmt = self.table.insert().values(**values).returning(self.table)
         row = (await db_conn.execute(stmt)).one()
-        return self.db_scheme.from_orm(row)
+        return self.db_scheme.model_validate(row)
 
     async def create_many(
         self, db_conn: AsyncConnection, objs_in: list[CreateSchemaTypeT]
@@ -128,10 +120,8 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
         :return: Nothing
         """
         now = utc_now()
-        all_values = [
-            jsonable_encoder(obj_in, custom_encoder=self.custom_encoder)
-            for obj_in in objs_in
-        ]
+        all_values = [{**obj_in.model_dump(), "created_at": now} for obj_in in objs_in]
+
         for values in all_values:
             values["created_at"] = now
             if self.has_updated_at:
@@ -150,11 +140,9 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
         :param obj_in: Object to update with
         :return: The updated object in db
         """
-        values = jsonable_encoder(
-            obj_in,
-            exclude={"id"},
+        values = obj_in.model_dump(
+            exclude=({"id"}),
             exclude_unset=True,
-            custom_encoder=self.custom_encoder,
         )
         stmt = (
             self.table.update()
@@ -163,7 +151,7 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
             .returning(self.table)
         )
         row = (await db_conn.execute(stmt)).one()
-        return self.db_scheme.from_orm(row)
+        return self.db_scheme.model_validate(row)
 
     async def upsert_many_with_version_checking(  # type: ignore[empty-body]
         self,

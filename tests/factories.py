@@ -1,6 +1,5 @@
 from uuid import UUID
 
-from pendulum import Date
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app import crud
@@ -13,13 +12,8 @@ from app.schemas.product_discount import (
     ProductDiscountDBSchema,
 )
 from app.schemas.product_price import ProductPriceCreateSchema, ProductPriceDBSchema
-from app.schemas.product_price_history import (
-    ProductPriceHistoryCreateSchema,
-    ProductPriceHistoryDBSchema,
-)
 from app.schemas.shop import ShopCreateSchema, ShopDBSchema
 from tests.utils import (
-    date_now,
     random_bool,
     random_country_code,
     random_currency_code,
@@ -156,33 +150,4 @@ async def product_discount_factory(
     )
     if create:
         return await crud.product_discount.create(db_conn, schema)
-    return schema
-
-
-async def product_price_history_factory(
-    db_conn: AsyncConnection,
-    create: bool = True,
-    product_id: UUID | None = None,
-    country_code: CountryCode | None = None,
-    currency_code: CurrencyCode | None = None,
-    max_price: float | None = None,
-    min_price: float | None = None,
-    avg_price: float | None = None,
-    price_type: ProductPriceType | None = None,
-    date: Date | None = None,
-    version: int | None = None,
-) -> ProductPriceHistoryCreateSchema | ProductPriceHistoryDBSchema:
-    schema = ProductPriceHistoryCreateSchema(
-        id=product_id or random_one_id(),
-        country_code=country_code or random_country_code(),
-        currency_code=currency_code or random_currency_code(),
-        max_price=max_price or float(random_int()),
-        min_price=min_price or float(random_int()),
-        avg_price=avg_price or float(random_int()),
-        price_type=price_type or random_product_price_type(),
-        date=date or date_now(),
-        version=version or random_int(),
-    )
-    if create:
-        return await crud.product_price_history.create(db_conn, schema)
     return schema

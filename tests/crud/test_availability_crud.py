@@ -64,11 +64,9 @@ async def test_create_many_availabilities_or_do_nothing(db_conn):
 async def test_update_many_with_version_checking_availability(
     db_conn, availabilities: list[AvailabilityCreateSchema]
 ):
-    # Create Availabilities
     await crud.availability.create_many(db_conn, availabilities)
 
-    # Create update objects
-    update_objs = [
+    create_objs = [
         await availability_factory(
             db_conn,
             create=False,
@@ -77,21 +75,20 @@ async def test_update_many_with_version_checking_availability(
         )
         for availability in availabilities[:3]
     ]
-    update_objs[0].version = availabilities[0].version - 1
-    assert len(update_objs) == 3
-    update_schemas = [
-        AvailabilityUpdateSchema(**availability.dict()) for availability in update_objs
+    create_objs[0].version = availabilities[0].version - 1
+    assert len(create_objs) == 3
+    update_objs = [
+        AvailabilityUpdateSchema(**availability.model_dump())
+        for availability in create_objs
     ]
 
-    # Update Availabilities
-    res = await crud.availability.upsert_many_with_version_checking(
-        db_conn, update_schemas
-    )
+    res = await crud.availability.upsert_many_with_version_checking(db_conn, update_objs)
+
     # First one doesn't get updated, rest do
     assert len(res) == 2
 
     assert res
-    for res_availability in update_objs[1:]:
+    for res_availability in create_objs[1:]:
         compare(
             res_availability, await crud.availability.get(db_conn, res_availability.id)
         )
