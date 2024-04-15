@@ -9,9 +9,7 @@ from app.db.tables.buyable import buyable_table
 from app.schemas.buyable import BuyableCreateSchema, BuyableDBSchema, BuyableUpdateSchema
 
 
-class CRUDBuyable(
-    CRUDBase[BuyableDBSchema, BuyableCreateSchema, BuyableUpdateSchema, UUID]
-):
+class CRUDBuyable(CRUDBase[BuyableDBSchema, BuyableCreateSchema, BuyableUpdateSchema]):
     async def upsert_many_with_version_checking(
         self,
         db_conn: AsyncConnection,
@@ -20,6 +18,7 @@ class CRUDBuyable(
         data = [
             (
                 b.id,
+                b.country_code,
                 b.version,
                 b.buyable,
             )
@@ -31,15 +30,16 @@ class CRUDBuyable(
         WITH input_rows AS (
             SELECT
                 (value->>0)::uuid,
-                (value->>1)::bigint,
-                (value->>2)::boolean,
+                (value->>1)::countrycode,
+                (value->>2)::bigint,
+                (value->>3)::boolean,
                 NOW(),
                 NOW()
             FROM json_array_elements(:json_data)
         )
         , inserted AS (
             INSERT INTO {table}
-            (id, version, buyable, created_at, updated_at)
+            (id, country_code, version, buyable, created_at, updated_at)
             SELECT * FROM input_rows
             ON CONFLICT (id) DO
                 UPDATE SET

@@ -13,14 +13,22 @@ from .base import CRUDBase
 logger = logging.getLogger(__name__)
 
 
-class CRUDShop(CRUDBase[ShopDBSchema, ShopCreateSchema, ShopUpdateSchema, UUID]):
+class CRUDShop(CRUDBase[ShopDBSchema, ShopCreateSchema, ShopUpdateSchema]):
     async def upsert_many_with_version_checking(
         self,
         db_conn: AsyncConnection,
         entities: list[ShopCreateSchema | ShopUpdateSchema],
     ) -> list[UUID]:
         data = [
-            (s.id, s.version, s.paying, s.certificated, s.enabled, s.verified)
+            (
+                s.id,
+                s.country_code,
+                s.version,
+                s.paying,
+                s.certified,
+                s.enabled,
+                s.verified,
+            )
             for s in entities
         ]
 
@@ -29,25 +37,26 @@ class CRUDShop(CRUDBase[ShopDBSchema, ShopCreateSchema, ShopUpdateSchema, UUID])
         WITH input_rows AS (
             SELECT
                 (value->>0)::uuid,
-                (value->>1)::bigint,
-                (value->>2)::boolean,
+                (value->>1)::countrycode,
+                (value->>2)::bigint,
                 (value->>3)::boolean,
                 (value->>4)::boolean,
                 (value->>5)::boolean,
+                (value->>6)::boolean,
                 NOW(),
                 NOW()
             FROM json_array_elements(:json_data)
         )
         , inserted AS (
             INSERT INTO {table}
-                (id, version, paying, certificated, enabled, verified, created_at, updated_at)
+                (id, country_code, version, paying, certified, enabled, verified, created_at, updated_at)
             SELECT * FROM input_rows
             ON CONFLICT (id) DO
                 UPDATE SET
                     paying = EXCLUDED.paying,
                     enabled = EXCLUDED.enabled,
                     verified = EXCLUDED.verified,
-                    certificated = EXCLUDED.certificated,
+                    certified = EXCLUDED.certified,
                     version = EXCLUDED.version,
                     updated_at = NOW()
                 WHERE {table}.id = EXCLUDED.id AND {table}.version <= EXCLUDED.version

@@ -13,7 +13,7 @@ from .base import CRUDBase
 logger = logging.getLogger(__name__)
 
 
-class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema, OfferUpdateSchema, UUID]):
+class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema, OfferUpdateSchema]):
     async def upsert_many_with_version_checking(
         self,
         db_conn: AsyncConnection,
@@ -54,7 +54,6 @@ class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema, OfferUpdateSchema, UU
             ON CONFLICT (id) DO
                 UPDATE SET
                     product_id = excluded.product_id,
-                    country_code = EXCLUDED.country_code,
                     shop_id = EXCLUDED.shop_id,
                     amount = EXCLUDED.amount,
                     currency_code = EXCLUDED.currency_code,

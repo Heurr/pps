@@ -7,16 +7,14 @@ from sqlalchemy import text as sa_text
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.sql.elements import Label
 
-from app.types import IdCountryDatePk, IdCountryPk
 from app.utils import dump_to_json, utc_now
 
 DBSchemaTypeT = TypeVar("DBSchemaTypeT", bound=BaseModel)
 CreateSchemaTypeT = TypeVar("CreateSchemaTypeT", bound=BaseModel)
 UpdateSchemaTypeT = TypeVar("UpdateSchemaTypeT", bound=BaseModel)
-PkT = TypeVar("PkT", UUID, IdCountryPk, IdCountryDatePk)
 
 
-class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]):
+class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
     def __init__(
         self,
         table: Table,
@@ -34,7 +32,7 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
     def prefixed_columns(table: Table) -> list[Label]:
         return [c.label(f"{table.name}_{c.name}") for c in table.columns]
 
-    async def get(self, db_conn: AsyncConnection, obj_id: PkT) -> DBSchemaTypeT | None:
+    async def get(self, db_conn: AsyncConnection, obj_id: UUID) -> DBSchemaTypeT | None:
         """
         Get one row table
 
@@ -62,7 +60,7 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
         return [self.db_scheme.model_validate(row) for row in rows]
 
     async def get_in(
-        self, db_conn: AsyncConnection, obj_ids: list[PkT]
+        self, db_conn: AsyncConnection, obj_ids: list[UUID]
     ) -> list[DBSchemaTypeT]:
         """
         Get all rows matching provided ids
@@ -76,8 +74,8 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
         return [self.db_scheme.model_validate(row) for row in rows]
 
     async def find_existing_ids(
-        self, db_conn: AsyncConnection, pks: list[PkT]
-    ) -> set[PkT]:
+        self, db_conn: AsyncConnection, pks: list[UUID]
+    ) -> set[UUID]:
         """
         Get IDs of rows that match provided IDs
 
@@ -157,7 +155,7 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
         self,
         db_conn: AsyncConnection,
         entities: list[CreateSchemaTypeT | UpdateSchemaTypeT],
-    ) -> list[PkT]:
+    ) -> list[UUID]:
         """
         Create many rows using Common Table Expression (CTE) or update while version checking
         specific for each CRUD
@@ -167,10 +165,12 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
         :return: List of primary keys, can return tuples if table has composite primary key
         """
 
-    async def remove(self, db_conn: AsyncConnection, db_obj: DBSchemaTypeT) -> PkT | None:
+    async def remove(
+        self, db_conn: AsyncConnection, db_obj: DBSchemaTypeT
+    ) -> UUID | None:
         return await self.remove_by_id(db_conn, db_obj.id)  # type: ignore[attr-defined]
 
-    async def remove_by_id(self, db_conn: AsyncConnection, obj_id: PkT) -> PkT | None:
+    async def remove_by_id(self, db_conn: AsyncConnection, obj_id: UUID) -> UUID | None:
         stmt = (
             self.table.delete()
             .where(self.table.c.id == obj_id)
@@ -180,8 +180,8 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT, PkT]
         return res
 
     async def remove_many_with_version_checking(
-        self, db_conn: AsyncConnection, ids_versions: list[tuple[PkT, int]]
-    ) -> list[PkT]:
+        self, db_conn: AsyncConnection, ids_versions: list[tuple[UUID, int]]
+    ) -> list[UUID]:
         """
         Only remove rows with version bigger then old version
 

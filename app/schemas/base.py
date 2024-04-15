@@ -1,10 +1,12 @@
 from datetime import datetime
+from typing import Type
 from uuid import UUID
 
 from pydantic import BaseModel as _BaseModel
 from pydantic import ConfigDict
 
 from app.constants import CountryCode
+from app.exceptions import ApiError
 
 
 class BaseModel(_BaseModel):
@@ -12,12 +14,22 @@ class BaseModel(_BaseModel):
         return hash((type(self),) + tuple(self.__dict__.values()))
 
 
-class BaseIdModel(BaseModel):
+class EntityModel(BaseModel):
     id: UUID
-
-
-class BaseMessageModel(BaseIdModel):
     version: int
+    country_code: CountryCode
+
+    def __ge__(self, other: Type["EntityModel"]) -> bool:
+        if hasattr(other, "version"):
+            return self.version >= other.version
+        else:
+            raise ApiError("Not supported operation, version not found")
+
+    def __gt__(self, other: Type["EntityModel"]) -> bool:
+        if hasattr(other, "version"):
+            return self.version > other.version
+        else:
+            raise ApiError("Not supported operation, version not found")
 
 
 class BaseDBSchema(BaseModel):
@@ -26,11 +38,3 @@ class BaseDBSchema(BaseModel):
 
     # TODO check if needed
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
-
-
-class BaseIdCountryModel(BaseIdModel):
-    country_code: CountryCode
-
-
-class DBBaseIdCountryModel(BaseIdCountryModel, BaseDBSchema):
-    pass

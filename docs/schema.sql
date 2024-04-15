@@ -2,7 +2,7 @@
 -- Create the shops table
 CREATE TABLE shops (
     id UUID PRIMARY KEY,
-    certificated BOOLEAN DEFAULT FALSE NOT NULL,
+    certified BOOLEAN DEFAULT FALSE NOT NULL,
     verified BOOLEAN DEFAULT FALSE NOT NULL,
     paying BOOLEAN DEFAULT FALSE NOT NULL,
     enabled BOOLEAN DEFAULT FALSE NOT NULL,

@@ -23,6 +23,7 @@ async def test_create_many_availabilities_or_do_nothing(db_conn):
             db_conn,
             create=False,
             availability_id=availability_0.id,
+            country_code=availability_0.country_code,
             version=availability_0.version - 1,
         ),
         await availability_factory(
@@ -35,6 +36,7 @@ async def test_create_many_availabilities_or_do_nothing(db_conn):
             db_conn,
             create=False,
             availability_id=availability_2.id,
+            country_code=availability_2.country_code,
             version=random_int(a=1001, b=2000),
         ),
         await availability_factory(
@@ -71,6 +73,7 @@ async def test_update_many_with_version_checking_availability(
             db_conn,
             create=False,
             availability_id=availability.id,
+            country_code=availability.country_code,
             version=random_int(a=1001, b=2000),
         )
         for availability in availabilities[:3]

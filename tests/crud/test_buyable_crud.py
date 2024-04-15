@@ -20,7 +20,11 @@ async def test_create_many_buyables_or_update(db_conn):
 
     buyables_in = [
         await buyable_factory(
-            db_conn, create=False, buyable_id=buyable_0.id, version=buyable_0.version - 1
+            db_conn,
+            create=False,
+            buyable_id=buyable_0.id,
+            version=buyable_0.version - 1,
+            country_code=buyable_0.country_code,
         ),
         await buyable_factory(
             db_conn,
@@ -32,6 +36,7 @@ async def test_create_many_buyables_or_update(db_conn):
             db_conn,
             create=False,
             buyable_id=buyable_2.id,
+            country_code=buyable_2.country_code,
             version=random_int(a=1001, b=2000),
         ),
         await buyable_factory(
@@ -69,6 +74,7 @@ async def test_update_many_with_version_checking_buyable(
             db_conn,
             create=False,
             buyable_id=buyable.id,
+            country_code=buyable.country_code,
             version=random_int(a=1001, b=2000),
         )
         for buyable in buyables[:3]
