@@ -10,11 +10,8 @@ from tests.utils import compare, random_int, random_one_id
 async def test_update_many_with_version_checking_shop(
     db_conn, shops: list[ShopCreateSchema]
 ):
-    # Create shops
     await crud.shop.create_many(db_conn, shops)
-
-    # Create update objects
-    update_objs = [
+    create_objs = [
         await shop_factory(
             db_conn,
             create=False,
@@ -27,17 +24,17 @@ async def test_update_many_with_version_checking_shop(
         )
         for shop in shops[:3]
     ]
-    update_objs[0].version = shops[0].version - 1
-    assert len(update_objs) == 3
-    update_schemas = [ShopUpdateSchema(**shop.dict()) for shop in update_objs]
+    create_objs[0].version = shops[0].version - 1
+    assert len(create_objs) == 3
+    update_objs = [ShopUpdateSchema(**shop.model_dump()) for shop in create_objs]
 
-    # Update shops
-    res = await crud.shop.upsert_many_with_version_checking(db_conn, update_schemas)
+    res = await crud.shop.upsert_many_with_version_checking(db_conn, update_objs)
+
     # First one doesnt get updated, rest do
     assert len(res) == 2
 
     assert res
-    for res_shop in update_objs[1:]:
+    for res_shop in create_objs[1:]:
         compare(res_shop, await crud.shop.get(db_conn, res_shop.id))
 
 

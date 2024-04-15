@@ -84,11 +84,8 @@ async def test_create_many_or_do_nothing(db_conn):
 async def test_update_many_with_version_checking_offer(
     db_conn, offers: list[OfferCreateSchema]
 ):
-    # Create offers
     await crud.offer.create_many(db_conn, offers)
-
-    # Create update objects
-    update_objs = [
+    create_obj = [
         await offer_factory(
             db_conn,
             create=False,
@@ -97,15 +94,15 @@ async def test_update_many_with_version_checking_offer(
         )
         for offer in offers[:3]
     ]
-    update_objs[0].version = offers[0].version - 1
-    assert len(update_objs) == 3
-    update_schemas = [OfferUpdateSchema(**offer.dict()) for offer in update_objs]
+    create_obj[0].version = offers[0].version - 1
+    assert len(create_obj) == 3
+    update_objs = [OfferUpdateSchema(**offer.model_dump()) for offer in create_obj]
 
-    # Update shops
-    res = await crud.offer.upsert_many_with_version_checking(db_conn, update_schemas)
+    res = await crud.offer.upsert_many_with_version_checking(db_conn, update_objs)
+
     # First one doesnt get updated, rest do
     assert len(res) == 2
 
     assert res
-    for res_offer in update_objs[1:]:
+    for res_offer in create_obj[1:]:
         compare(res_offer, await crud.offer.get(db_conn, res_offer.id))

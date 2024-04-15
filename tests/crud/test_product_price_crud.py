@@ -67,11 +67,8 @@ async def test_create_many_product_prices_or_do_nothing(db_conn):
 async def test_update_many_with_version_checking_product_price(
     db_conn, product_prices: list[ProductPriceCreateSchema]
 ):
-    # Create ProductPrices
     await crud.product_price.create_many(db_conn, product_prices)
-
-    # Create update objects
-    update_objs = [
+    create_objs = [
         await product_price_factory(
             db_conn,
             create=False,
@@ -81,20 +78,19 @@ async def test_update_many_with_version_checking_product_price(
         )
         for product_price in product_prices[:3]
     ]
-    update_objs[0].version = product_prices[0].version - 1
-    assert len(update_objs) == 3
-    update_schemas = [
-        ProductPriceUpdateSchema(**product_price.dict()) for product_price in update_objs
+    create_objs[0].version = product_prices[0].version - 1
+    assert len(create_objs) == 3
+    update_objs = [
+        ProductPriceUpdateSchema(**product_price.model_dump())
+        for product_price in create_objs
     ]
 
-    # Update ProductPrices
-    res = await crud.product_price.upsert_many_with_version_checking(
-        db_conn, update_schemas
-    )
+    res = await crud.product_price.upsert_many_with_version_checking(db_conn, update_objs)
+
     # First one doesn't get updated, rest do
     assert len(res) == 2
 
-    for res_product_price in update_objs[1:]:
+    for res_product_price in create_objs[1:]:
         compare(
             res_product_price,
             await crud.product_price.get(

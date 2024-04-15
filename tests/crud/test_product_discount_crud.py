@@ -97,11 +97,9 @@ async def test_create_many_product_discounts_or_do_nothing(db_conn):
 async def test_update_many_with_version_checking_product_discount(
     db_conn, product_discounts: list[ProductDiscountCreateSchema]
 ):
-    # Create ProductDiscounts
     await crud.product_discount.create_many(db_conn, product_discounts)
 
-    # Create update objects
-    update_objs = [
+    create_objs = [
         await product_discount_factory(
             db_conn,
             create=False,
@@ -111,20 +109,20 @@ async def test_update_many_with_version_checking_product_discount(
         )
         for product_discount in product_discounts[:3]
     ]
-    update_objs[0].version = product_discounts[0].version - 1
-    assert len(update_objs) == 3
-    update_schemas = [
-        ProductDiscountUpdateSchema(**product_discount.dict())
-        for product_discount in update_objs
+    create_objs[0].version = product_discounts[0].version - 1
+    assert len(create_objs) == 3
+    update_objs = [
+        ProductDiscountUpdateSchema(**product_discount.model_dump())
+        for product_discount in create_objs
     ]
 
     # Update ProductDiscounts
     res = await crud.product_discount.upsert_many_with_version_checking(
-        db_conn, update_schemas
+        db_conn, update_objs
     )
     # First one doesn't get updated, rest do
     assert len(res) == 2
-    for res_product_discount in update_objs[1:]:
+    for res_product_discount in create_objs[1:]:
         compare(
             res_product_discount,
             await crud.product_discount.get(

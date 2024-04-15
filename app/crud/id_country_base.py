@@ -41,7 +41,7 @@ class CRUDIdCountryBase(
             and_(self.table.c.id == obj_id[0], self.table.c.country_code == obj_id[1])
         )
         row = (await db_conn.execute(stmt)).one_or_none()
-        return self.db_scheme.from_orm(row) if row else None
+        return self.db_scheme.model_validate(row) if row else None
 
     async def get_in(
         self, db_conn: AsyncConnection, obj_ids: list[IdCountryPk]
@@ -50,7 +50,7 @@ class CRUDIdCountryBase(
             tuple_(self.table.c.id, self.table.c.country_code).in_(obj_ids)
         )
         rows = await db_conn.execute(stmt)
-        return [self.db_scheme.from_orm(row) for row in rows]
+        return [self.db_scheme.model_validate(row) for row in rows]
 
     async def find_existing_ids(
         self, db_conn: AsyncConnection, pks: list[IdCountryPk]

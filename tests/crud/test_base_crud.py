@@ -17,23 +17,19 @@ async def test_create_shop(db_conn, shops: list[ShopCreateSchema]):
 
 @pytest.mark.anyio
 async def test_update_shop(db_conn, shops: list[ShopCreateSchema]):
-    # Create shop
     to_update = shops[0]
     await crud.shop.create(db_conn, to_update)
 
-    # Create update object
     new_version = random_int(a=1001, b=2000)
-    update_obj = await shop_factory(
+    create_obj = await shop_factory(
         db_conn, create=False, shop_id=to_update.id, version=new_version
     )
-    update_obj_schema = ShopUpdateSchema(**update_obj.dict())
-
-    # Update shop
-    res = await crud.shop.update(db_conn, update_obj_schema)
+    update_obj = ShopUpdateSchema(**create_obj.model_dump())
+    res = await crud.shop.update(db_conn, update_obj)
 
     assert res
     assert res.version == new_version
-    compare(update_obj, await crud.shop.get(db_conn, res.id))
+    compare(create_obj, await crud.shop.get(db_conn, res.id))
 
 
 @pytest.mark.anyio
@@ -48,7 +44,7 @@ async def test_delete_shop(db_conn):
         shop_id=to_delete.id,
         version=to_delete.version,
     )
-    update_obj_schema = ShopUpdateSchema(**delete_obj.dict())
+    update_obj_schema = ShopUpdateSchema(**delete_obj.model_dump())
 
     res = await crud.shop.remove(db_conn, update_obj_schema)
 
