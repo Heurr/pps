@@ -14,9 +14,7 @@ from app.schemas.availability import (
 
 
 class CRUDAvailability(
-    CRUDBase[
-        AvailabilityDBSchema, AvailabilityCreateSchema, AvailabilityUpdateSchema, UUID
-    ]
+    CRUDBase[AvailabilityDBSchema, AvailabilityCreateSchema, AvailabilityUpdateSchema]
 ):
     async def upsert_many_with_version_checking(
         self,
@@ -26,6 +24,7 @@ class CRUDAvailability(
         data = [
             (
                 a.id,
+                a.country_code,
                 a.version,
                 a.in_stock,
             )
@@ -37,15 +36,16 @@ class CRUDAvailability(
         WITH input_rows AS (
             SELECT
                 (value->>0)::uuid,
-                (value->>1)::bigint,
-                (value->>2)::boolean,
+                (value->>1)::countrycode,
+                (value->>2)::bigint,
+                (value->>3)::boolean,
                 NOW(),
                 NOW()
             FROM json_array_elements(:json_data)
         )
         , inserted AS (
             INSERT INTO {table}
-            (id, version, in_stock, created_at, updated_at)
+            (id, country_code, version, in_stock, created_at, updated_at)
             SELECT * FROM input_rows
             ON CONFLICT (id) DO
                 UPDATE SET

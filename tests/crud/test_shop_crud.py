@@ -17,7 +17,8 @@ async def test_update_many_with_version_checking_shop(
             create=False,
             shop_id=shop.id,
             version=random_int(a=1001, b=2000),
-            certificated=not shop.certificated,
+            country_code=shop.country_code,
+            certified=not shop.certified,
             verified=not shop.verified,
             paying=not shop.paying,
             enabled=not shop.enabled,
@@ -47,13 +48,21 @@ async def test_create_many_or_do_nothing(db_conn):
 
     shops_in = [
         await shop_factory(
-            db_conn, create=False, shop_id=shop_0.id, version=shop_0.version - 1
+            db_conn,
+            create=False,
+            shop_id=shop_0.id,
+            version=shop_0.version - 1,
+            country_code=shop_0.country_code,
         ),
         await shop_factory(
             db_conn, create=False, shop_id=shop_1_id, version=random_int(a=1001, b=2000)
         ),
         await shop_factory(
-            db_conn, create=False, shop_id=shop_2.id, version=random_int(a=1001, b=2000)
+            db_conn,
+            create=False,
+            shop_id=shop_2.id,
+            version=random_int(a=1001, b=2000),
+            country_code=shop_2.country_code,
         ),
         await shop_factory(
             db_conn, create=False, shop_id=shop_3_id, version=random_int(a=1001, b=2000)

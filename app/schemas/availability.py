@@ -1,29 +1,18 @@
-from uuid import UUID
-
-from pydantic import Field
-
 from app.constants import StockInfo
-from app.schemas.base import BaseDBSchema, BaseIdModel, BaseMessageModel
+from app.schemas.base import BaseDBSchema, EntityModel
 
 
-class AvailabilityMessageSchema(BaseMessageModel):
-    id: UUID = Field(..., alias="offerId")
+class AvailabilityMessageSchema(EntityModel):
     stock_info: StockInfo
 
 
-class AvailabilityBaseSchema(BaseIdModel):
+class AvailabilityCreateSchema(EntityModel):
     in_stock: bool = False
-    version: int
 
 
-class AvailabilityUpdateSchema(BaseIdModel):
+class AvailabilityUpdateSchema(EntityModel):
     in_stock: bool | None = None
-    version: int | None = None
 
 
-class AvailabilityCreateSchema(AvailabilityBaseSchema):
-    pass
-
-
-class AvailabilityDBSchema(AvailabilityBaseSchema, BaseDBSchema):
+class AvailabilityDBSchema(AvailabilityCreateSchema, BaseDBSchema):
     pass

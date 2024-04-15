@@ -1,5 +1,5 @@
 from app.constants import ShopCertificate
-from app.schemas.base import BaseDBSchema, BaseIdModel, BaseMessageModel, BaseModel
+from app.schemas.base import BaseDBSchema, BaseModel, EntityModel
 
 
 class ShopState(BaseModel):
@@ -9,30 +9,24 @@ class ShopState(BaseModel):
     deletable: bool | None
 
 
-class ShopMessageSchema(BaseMessageModel):
-    certificate: ShopCertificate
+class ShopMessageSchema(EntityModel):
+    certified: ShopCertificate
     state: ShopState
 
 
-class ShopBaseSchema(BaseIdModel):
-    certificated: bool = False
+class ShopCreateSchema(EntityModel):
+    certified: bool = False
     verified: bool = False
     paying: bool = False
     enabled: bool = False
-    version: int
 
 
-class ShopUpdateSchema(BaseIdModel):
-    certificated: bool | None = None
+class ShopUpdateSchema(EntityModel):
+    certified: bool | None = None
     verified: bool | None = None
     paying: bool | None = None
     enabled: bool | None = None
-    version: int | None = None
 
 
-class ShopCreateSchema(ShopBaseSchema):
-    pass
-
-
-class ShopDBSchema(ShopBaseSchema, BaseDBSchema):
+class ShopDBSchema(ShopCreateSchema, BaseDBSchema):
     pass

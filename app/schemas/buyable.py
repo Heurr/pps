@@ -1,28 +1,17 @@
-from uuid import UUID
-
-from pydantic import Field
-
-from app.schemas.base import BaseDBSchema, BaseIdModel, BaseMessageModel
+from app.schemas.base import BaseDBSchema, EntityModel
 
 
-class BuyableMessageSchema(BaseMessageModel):
-    offer_id: UUID = Field(..., alias="offerId")
+class BuyableMessageSchema(EntityModel):
     buyable: bool
 
 
-class BuyableBaseSchema(BaseIdModel):
+class BuyableCreateSchema(EntityModel):
     buyable: bool = False
-    version: int
 
 
-class BuyableUpdateSchema(BaseIdModel):
+class BuyableUpdateSchema(EntityModel):
     buyable: bool | None = None
-    version: int | None = None
 
 
-class BuyableCreateSchema(BuyableBaseSchema):
-    pass
-
-
-class BuyableDBSchema(BuyableBaseSchema, BaseDBSchema):
+class BuyableDBSchema(BuyableCreateSchema, BaseDBSchema):
     pass

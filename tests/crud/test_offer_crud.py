@@ -46,7 +46,7 @@ async def test_create_offer_test_numeric_limit_before_decimal_error(db_conn):
 
 
 @pytest.mark.anyio
-async def test_create_many_or_do_nothing(db_conn):
+async def test_create_offer_many_or_do_nothing(db_conn):
     offer_0 = await offer_factory(db_conn)
     offer_1_id = random_one_id()
     offer_2 = await offer_factory(db_conn)
@@ -54,13 +54,21 @@ async def test_create_many_or_do_nothing(db_conn):
 
     offers_in = [
         await offer_factory(
-            db_conn, create=False, offer_id=offer_0.id, version=offer_0.version - 1
+            db_conn,
+            create=False,
+            offer_id=offer_0.id,
+            version=offer_0.version - 1,
+            country_code=offer_0.country_code,
         ),
         await offer_factory(
             db_conn, create=False, offer_id=offer_1_id, version=random_int(a=1001, b=2000)
         ),
         await offer_factory(
-            db_conn, create=False, offer_id=offer_2.id, version=random_int(a=1001, b=2000)
+            db_conn,
+            create=False,
+            offer_id=offer_2.id,
+            version=random_int(a=1001, b=2000),
+            country_code=offer_2.country_code,
         ),
         await offer_factory(
             db_conn, create=False, offer_id=offer_3_id, version=random_int(a=1001, b=2000)
@@ -90,6 +98,7 @@ async def test_update_many_with_version_checking_offer(
             db_conn,
             create=False,
             offer_id=offer.id,
+            country_code=offer.country_code,
             version=random_int(a=1001, b=2000),
         )
         for offer in offers[:3]

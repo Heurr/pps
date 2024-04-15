@@ -1,9 +1,7 @@
 from uuid import UUID
 
-from pydantic import Field
-
-from app.constants import CountryCode, CurrencyCode, PriceType
-from app.schemas.base import BaseDBSchema, BaseIdModel, BaseMessageModel, BaseModel
+from app.constants import CurrencyCode, PriceType
+from app.schemas.base import BaseDBSchema, BaseModel, EntityModel
 
 
 class Price(BaseModel):
@@ -13,35 +11,27 @@ class Price(BaseModel):
     vat: float
 
 
-class OfferMessageSchema(BaseMessageModel):
+class OfferMessageSchema(EntityModel):
     local_product_id: str
-    product_id: UUID | None  # Compute using UUIDv5 from local id
-    country_code: CountryCode
-    shop_id: UUID = Field(..., alias="shopId")
+    product_id: UUID | None
+    shop_id: UUID
     prices: list[Price]
+    # Add more attributes when working on workers
 
 
-class OfferBaseSchema(BaseIdModel):
+class OfferCreateSchema(EntityModel):
     product_id: UUID
-    country_code: CountryCode
     shop_id: UUID
     amount: float
     currency_code: CurrencyCode
-    version: int
 
 
-class OfferUpdateSchema(BaseIdModel):
+class OfferUpdateSchema(EntityModel):
     product_id: UUID
-    country_code: CountryCode | None = None
     shop_id: UUID | None = None
     amount: float | None = None
     currency_code: CurrencyCode | None = None
-    version: int | None = None
 
 
-class OfferCreateSchema(OfferBaseSchema):
-    pass
-
-
-class OfferDBSchema(OfferBaseSchema, BaseDBSchema):
+class OfferDBSchema(OfferCreateSchema, BaseDBSchema):
     pass
