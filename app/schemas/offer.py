@@ -22,7 +22,7 @@ class OfferMessageSchema(EntityModel):
 class OfferCreateSchema(EntityModel):
     product_id: UUID
     shop_id: UUID
-    amount: float
+    price: float
     currency_code: CurrencyCode
 
 

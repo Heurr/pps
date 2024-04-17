@@ -5,7 +5,11 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.constants import Entity
-from app.crud.base import CreateSchemaTypeT, CRUDBase, DBSchemaTypeT
+from app.crud.base import (
+    CreateSchemaTypeT,
+    CRUDBase,
+    DBSchemaTypeT,
+)
 
 CRUDTypeT = TypeVar("CRUDTypeT", bound=CRUDBase)
 
@@ -28,7 +32,9 @@ class BaseMessageService(
         self.create_schema = create_schema
         self.logger = getLogger(self.__class__.__name__)
 
-    async def get_many(self, db_conn: AsyncConnection, skip: int = 0, limit: int = 100):
+    async def get_many(
+        self, db_conn: AsyncConnection, skip: int = 0, limit: int = 100
+    ) -> list[DBSchemaTypeT]:
         return await self.crud.get_many(db_conn, skip=skip, limit=limit)
 
     async def get_many_by_ids(

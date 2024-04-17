@@ -1,16 +1,24 @@
+import logging
 from typing import Generic, Type, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel
+from asyncpg.exceptions import (
+    DataError,
+    InterfaceError,
+    TransactionRollbackError,
+)
 from sqlalchemy import Table
 from sqlalchemy import text as sa_text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.sql.elements import Label
 
+from app.schemas.base import EntityModel
 from app.utils import dump_to_json, utc_now
+from app.utils.sentry import set_sentry_context
 
-DBSchemaTypeT = TypeVar("DBSchemaTypeT", bound=BaseModel)
-CreateSchemaTypeT = TypeVar("CreateSchemaTypeT", bound=BaseModel)
+DBSchemaTypeT = TypeVar("DBSchemaTypeT", bound=EntityModel)
+CreateSchemaTypeT = TypeVar("CreateSchemaTypeT", bound=EntityModel)
 
 
 class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT]):
@@ -19,27 +27,18 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT]):
         table: Table,
         db_scheme: Type[DBSchemaTypeT],
         create_scheme: Type[CreateSchemaTypeT],
+        updatable_columns: list[str],
     ):
         self.table = table
         self.db_scheme = db_scheme
         self.create_scheme = create_scheme
         self.has_updated_at = "updated_at" in self.table.c
+        self.updatable_columns = updatable_columns
+        self.logger = logging.getLogger(__name__)
 
     @staticmethod
     def prefixed_columns(table: Table) -> list[Label]:
         return [c.label(f"{table.name}_{c.name}") for c in table.columns]
-
-    async def get(self, db_conn: AsyncConnection, obj_id: UUID) -> DBSchemaTypeT | None:
-        """
-        Get one row table
-
-        :param db_conn: Database connection
-        :param obj_id: ID of primary keys of the object to get
-        :return: If found the object corresponding to the id, else nothing
-        """
-        stmt = self.table.select().where(self.table.c.id == obj_id)
-        row = (await db_conn.execute(stmt)).one_or_none()
-        return self.db_scheme.model_validate(row) if row else None
 
     async def get_many(
         self, db_conn: AsyncConnection, *, skip: int = 0, limit: int = 100
@@ -70,45 +69,11 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT]):
         rows = await db_conn.execute(stmt)
         return [self.db_scheme.model_validate(row) for row in rows]
 
-    async def find_existing_ids(
-        self, db_conn: AsyncConnection, pks: list[UUID]
-    ) -> set[UUID]:
-        """
-        Get IDs of rows that match provided IDs
-
-        :param db_conn: Database connection
-        :param pks: UUIDs to find
-        :return: A subset of provided IDs that were found in db
-        """
-        stmt = self.table.select().where(self.table.c.id.in_(pks))
-        res = await db_conn.execute(stmt)
-        return {r.id for r in res}
-
-    async def create(
-        self, db_conn: AsyncConnection, obj_in: CreateSchemaTypeT
-    ) -> DBSchemaTypeT:
-        """
-        Create one row using provided object
-
-        :param db_conn: Database connection
-        :param obj_in: Object to create
-        :return: Created object
-        """
-        values = obj_in.model_dump()
-
-        values["created_at"] = utc_now()
-        if self.has_updated_at:
-            values["updated_at"] = values["created_at"]
-
-        stmt = self.table.insert().values(**values).returning(self.table)
-        row = (await db_conn.execute(stmt)).one()
-        return self.db_scheme.model_validate(row)
-
     async def create_many(
         self, db_conn: AsyncConnection, objs_in: list[CreateSchemaTypeT]
-    ) -> None:
+    ) -> list[DBSchemaTypeT]:
         """
-        Create many rows using provided object
+        Create many rows using provided object, used only for tests
 
         :param db_conn: Database connection
         :param objs_in: Objects to create
@@ -122,10 +87,37 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT]):
             if self.has_updated_at:
                 values["updated_at"] = now
 
-        stmt = self.table.insert().values(all_values)
-        await db_conn.execute(stmt)
+        stmt = self.table.insert().values(all_values).returning(self.table)
+        rows = (await db_conn.execute(stmt)).fetchall()
+        return [self.db_scheme.model_validate(row) for row in rows]
 
-    async def upsert_many_with_version_checking(  # type: ignore[empty-body]
+    async def _do_upsert_many(
+        self,
+        db_conn: AsyncConnection,
+        cols_to_update_on_conflict: list[str],
+        values: list[dict],
+    ) -> list[UUID]:
+        # Sort before upserting to avoid conflicts
+        values.sort(key=lambda x: x["id"])
+
+        stmt = insert(self.table).values(values)
+        on_conflict_stmt = stmt.on_conflict_do_update(
+            index_elements=self.table.primary_key.columns,
+            # When updating, do only for specified columns
+            set_={k: getattr(stmt.excluded, k) for k in cols_to_update_on_conflict},
+        ).returning(self.table.c.id)
+
+        try:
+            res = await db_conn.execute(on_conflict_stmt)
+        except (InterfaceError, TransactionRollbackError, DataError) as err:
+            self.logger.error("Query raised error: %s\n%s", stmt, values)
+            set_sentry_context("pg", {"stmt": stmt, "values": values})
+            raise err
+
+        upserted_ids = [i[0] for i in res.fetchall()]
+        return upserted_ids
+
+    async def upsert_many(
         self,
         db_conn: AsyncConnection,
         entities: list[CreateSchemaTypeT],
@@ -138,20 +130,11 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT]):
         :param entities: List of entities to be upserted
         :return: List of primary keys, can return tuples if table has composite primary key
         """
-
-    async def remove(
-        self, db_conn: AsyncConnection, db_obj: DBSchemaTypeT
-    ) -> UUID | None:
-        return await self.remove_by_id(db_conn, db_obj.id)  # type: ignore[attr-defined]
-
-    async def remove_by_id(self, db_conn: AsyncConnection, obj_id: UUID) -> UUID | None:
-        stmt = (
-            self.table.delete()
-            .where(self.table.c.id == obj_id)
-            .returning(self.table.c.id)
-        )
-        res = (await db_conn.execute(stmt)).scalar()
-        return res
+        now = utc_now()
+        values = [
+            {**e.model_dump(), "created_at": now, "updated_at": now} for e in entities
+        ]
+        return await self._do_upsert_many(db_conn, self.updatable_columns, values)
 
     async def remove_many_with_version_checking(
         self, db_conn: AsyncConnection, ids_versions: list[tuple[UUID, int]]
@@ -183,9 +166,3 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT]):
         res = await db_conn.execute(stmt)
         deleted_ids = [r.id for r in res]
         return deleted_ids
-
-    async def upsert_many(  # type: ignore[empty-body]
-        self, db_conn: AsyncConnection, entities: list[CreateSchemaTypeT]
-    ) -> list[UUID]:
-        # TODO logic that samo does
-        pass

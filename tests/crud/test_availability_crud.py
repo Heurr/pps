@@ -12,7 +12,7 @@ async def availabilities(db_conn) -> list[AvailabilityCreateSchema]:
 
 
 @pytest.mark.anyio
-async def test_create_many_availabilities_or_do_nothing(db_conn):
+async def test_create_availabilities(db_conn):
     availability_0 = await availability_factory(db_conn)
     availability_1_id = random_one_id()
     availability_2 = await availability_factory(db_conn)
@@ -47,23 +47,26 @@ async def test_create_many_availabilities_or_do_nothing(db_conn):
         ),
     ]
 
-    inserted_ids = await crud.availability.upsert_many_with_version_checking(
-        db_conn, availabilities_in
-    )
-    assert set(inserted_ids) == {availability_1_id, availability_2.id, availability_3_id}
+    inserted_ids = await crud.availability.upsert_many(db_conn, availabilities_in)
+    assert set(inserted_ids) == {
+        availability_0.id,
+        availability_1_id,
+        availability_2.id,
+        availability_3_id,
+    }
 
     availabilities_in_db = await crud.availability.get_many(db_conn)
     assert len(availabilities_in_db) == 4
 
     availability_map = {s.id: s for s in availabilities_in_db}
-    compare(availability_0, availability_map[availabilities_in[0].id])
+    compare(availabilities_in[0], availability_map[availabilities_in[0].id])
     compare(availabilities_in[1], availability_map[availabilities_in[1].id])
     compare(availabilities_in[2], availability_map[availabilities_in[2].id])
     compare(availabilities_in[3], availability_map[availabilities_in[3].id])
 
 
 @pytest.mark.anyio
-async def test_update_many_with_version_checking_availability(
+async def test_update_availabilities(
     db_conn, availabilities: list[AvailabilityCreateSchema]
 ):
     await crud.availability.create_many(db_conn, availabilities)
@@ -85,13 +88,14 @@ async def test_update_many_with_version_checking_availability(
         for availability in create_objs
     ]
 
-    res = await crud.availability.upsert_many_with_version_checking(db_conn, update_objs)
+    res = await crud.availability.upsert_many(db_conn, update_objs)
 
-    # First one doesn't get updated, rest do
-    assert len(res) == 2
+    # All get update since there is no version check
+    assert len(res) == 3
 
     assert res
     for res_availability in create_objs[1:]:
         compare(
-            res_availability, await crud.availability.get(db_conn, res_availability.id)
+            res_availability,
+            (await crud.availability.get_in(db_conn, [res_availability.id]))[0],
         )

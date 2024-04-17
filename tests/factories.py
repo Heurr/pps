@@ -46,7 +46,7 @@ async def shop_factory(  # noqa
         paying=paying or False,
     )
     if create:
-        return await crud.shop.create(db_conn, schema)
+        return (await crud.shop.create_many(db_conn, [schema]))[0]
     return schema
 
 
@@ -57,7 +57,7 @@ async def offer_factory(
     product_id: UUID | None = None,
     country_code: CountryCode | None = None,
     shop_id: UUID | None = None,
-    amount: float | None = None,
+    price: float | None = None,
     currency_code: CurrencyCode | None = None,
     version: int | None = None,
 ) -> OfferCreateSchema | OfferDBSchema:
@@ -66,12 +66,12 @@ async def offer_factory(
         product_id=product_id or random_one_id(),
         country_code=country_code or random_country_code(),
         shop_id=shop_id or random_one_id(),
-        amount=amount or float(random_int()),
+        price=price or float(random_int()),
         currency_code=currency_code or random_currency_code(),
         version=version or random_int(),
     )
     if create:
-        return await crud.offer.create(db_conn, schema)
+        return (await crud.offer.create_many(db_conn, [schema]))[0]
     return schema
 
 
@@ -90,7 +90,7 @@ async def buyable_factory(
         version=version or random_int(),
     )
     if create:
-        return await crud.buyable.create(db_conn, schema)
+        return (await crud.buyable.create_many(db_conn, [schema]))[0]
     return schema
 
 
@@ -109,7 +109,7 @@ async def availability_factory(
         version=version or random_int(),
     )
     if create:
-        return await crud.availability.create(db_conn, schema)
+        return (await crud.availability.create_many(db_conn, [schema]))[0]
     return schema
 
 

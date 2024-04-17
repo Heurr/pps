@@ -14,39 +14,39 @@ async def offers(db_conn) -> list[OfferCreateSchema]:
 
 @pytest.mark.anyio
 async def test_create_offer_test_numeric_limit_after_decimal(db_conn):
-    amount = 123.654194949169149
-    offer_in = await offer_factory(db_conn, amount=amount, create=False)
+    price = 123.654194949169149
+    offer_in = await offer_factory(db_conn, price=price, create=False)
 
-    res = await crud.offer.create(db_conn, obj_in=offer_in)
+    res = (await crud.offer.create_many(db_conn, [offer_in]))[0]
     assert res
-    compare(offer_in, res, ["amount"])
-    assert res.amount == round(amount, 2)
+    compare(offer_in, res, ["price"])
+    assert res.price == round(price, 2)
 
 
 @pytest.mark.anyio
 async def test_create_offer_test_numeric_limit_before_decimal(db_conn):
     # Max value is 10^10
-    amount = (10**10 - 1) + 0.524
-    offer_in = await offer_factory(db_conn, amount=amount, create=False)
+    price = (10**10 - 1) + 0.524
+    offer_in = await offer_factory(db_conn, price=price, create=False)
 
-    res = await crud.offer.create(db_conn, obj_in=offer_in)
+    res = (await crud.offer.create_many(db_conn, [offer_in]))[0]
     assert res
-    compare(offer_in, res, ignore_keys=["amount"])
-    assert res.amount == round(amount, 2)
+    compare(offer_in, res, ignore_keys=["price"])
+    assert res.price == round(price, 2)
 
 
 @pytest.mark.anyio
 async def test_create_offer_test_numeric_limit_before_decimal_error(db_conn):
     # Max value is 10^10
-    amount = (10**10) + 0.524
-    offer_in = await offer_factory(db_conn, amount=amount, create=False)
+    price = (10**10) + 0.524
+    offer_in = await offer_factory(db_conn, price=price, create=False)
 
     with pytest.raises(DBAPIError):
-        await crud.offer.create(db_conn, obj_in=offer_in)
+        await crud.offer.create_many(db_conn, [offer_in])
 
 
 @pytest.mark.anyio
-async def test_create_offer_many_or_do_nothing(db_conn):
+async def test_create_offers(db_conn):
     offer_0 = await offer_factory(db_conn)
     offer_1_id = random_one_id()
     offer_2 = await offer_factory(db_conn)
@@ -75,23 +75,21 @@ async def test_create_offer_many_or_do_nothing(db_conn):
         ),
     ]
 
-    inserted_ids = await crud.offer.upsert_many_with_version_checking(db_conn, offers_in)
-    assert set(inserted_ids) == {offer_1_id, offer_2.id, offer_3_id}
+    inserted_ids = await crud.offer.upsert_many(db_conn, offers_in)
+    assert set(inserted_ids) == {offer_0.id, offer_1_id, offer_2.id, offer_3_id}
 
     offers_in_db = await crud.offer.get_many(db_conn)
     assert len(offers_in_db) == 4
 
     offer_map = {s.id: s for s in offers_in_db}
-    compare(offer_0, offer_map[offers_in[0].id])
+    compare(offers_in[0], offer_map[offers_in[0].id])
     compare(offers_in[1], offer_map[offers_in[1].id])
     compare(offers_in[2], offer_map[offers_in[2].id])
     compare(offers_in[3], offer_map[offers_in[3].id])
 
 
 @pytest.mark.anyio
-async def test_update_many_with_version_checking_offer(
-    db_conn, offers: list[OfferCreateSchema]
-):
+async def test_update_offers(db_conn, offers: list[OfferCreateSchema]):
     await crud.offer.create_many(db_conn, offers)
     create_obj = [
         await offer_factory(
@@ -107,11 +105,11 @@ async def test_update_many_with_version_checking_offer(
     assert len(create_obj) == 3
     update_objs = [OfferCreateSchema(**offer.model_dump()) for offer in create_obj]
 
-    res = await crud.offer.upsert_many_with_version_checking(db_conn, update_objs)
+    res = await crud.offer.upsert_many(db_conn, update_objs)
 
     # First one doesnt get updated, rest do
-    assert len(res) == 2
+    assert len(res) == 3
 
     assert res
     for res_offer in create_obj[1:]:
-        compare(res_offer, await crud.offer.get(db_conn, res_offer.id))
+        compare(res_offer, (await crud.offer.get_in(db_conn, [res_offer.id]))[0])

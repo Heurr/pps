@@ -10,29 +10,9 @@ from tests.utils import compare
 async def test_create_shop(db_conn, shops: list[ShopCreateSchema]):
     shop_in = shops[0]
 
-    res = await crud.shop.create(db_conn, obj_in=shop_in)
+    res = (await crud.shop.create_many(db_conn, [shop_in]))[0]
     assert res
     compare(shop_in, res)
-
-
-@pytest.mark.anyio
-async def test_delete_shop(db_conn):
-    to_delete = await shop_factory(db_conn)
-    await shop_factory(db_conn)
-
-    # Create delete object
-    delete_obj = await shop_factory(
-        db_conn,
-        create=False,
-        shop_id=to_delete.id,
-        version=to_delete.version,
-    )
-    create_obj_schema = ShopCreateSchema(**delete_obj.model_dump())
-
-    res = await crud.shop.remove(db_conn, create_obj_schema)
-
-    assert res == to_delete.id
-    assert len(await crud.shop.get_many(db_conn)) == 1
 
 
 @pytest.mark.anyio
@@ -58,21 +38,10 @@ async def test_delete_shop_with_version_checking(db_conn):
 
 
 @pytest.mark.anyio
-async def test_delete_by_id_shop(db_conn):
-    to_delete = await shop_factory(db_conn)
-    await shop_factory(db_conn)
-
-    res = await crud.shop.remove_by_id(db_conn, to_delete.id)
-
-    assert res == to_delete.id
-    assert len(await crud.shop.get_many(db_conn)) == 1
-
-
-@pytest.mark.anyio
-async def test_create_many(db_conn, shops: list[ShopCreateSchema]):
+async def test_create(db_conn, shops: list[ShopCreateSchema]):
     res = await crud.shop.create_many(db_conn, shops)
 
-    assert not res
+    assert res
     inserted_shops = await crud.shop.get_many(db_conn)
     shop_map = {s.id: s for s in shops}
     for res_shop in inserted_shops:
@@ -81,15 +50,6 @@ async def test_create_many(db_conn, shops: list[ShopCreateSchema]):
 
 @pytest.mark.anyio
 async def test_get_shop(db_conn, shops_create: list[ShopCreateSchema]):
-    res = await crud.shop.get(db_conn, shops_create[0].id)
-
-    assert res
-
-    compare(shops_create[0], res)
-
-
-@pytest.mark.anyio
-async def test_get_many_shop(db_conn, shops_create: list[ShopCreateSchema]):
     res = await crud.shop.get_many(db_conn)
 
     assert len(shops_create) == len(res)
@@ -106,12 +66,3 @@ async def test_get_in_shop(db_conn, shops_create: list[ShopCreateSchema]):
     shop_map = {s.id: s for s in shops_create}
     for res_shop in res:
         compare(res_shop, shop_map[res_shop.id])
-
-
-@pytest.mark.anyio
-async def test_get_existing_ids(db_conn, shops_create: list[ShopCreateSchema]):
-    ids = [shops_create[0].id, shops_create[2].id]
-    res = await crud.shop.find_existing_ids(db_conn, ids)
-
-    assert len(res) == 2
-    assert set(ids) == res

@@ -71,9 +71,6 @@ class Entity(StrEnum):
     OFFER = "offer"
     BUYABLE = "buyable"
     AVAILABILITY = "availability"
-    PRODUCT_DISCOUNT = "product-discount"
-    PRODUCT_PRICE = "product-price"
-    PRODUCT_PRICE_HISTORY = "product-price-history"
 
 
 PLATFORM_COUNTRY_MAP = {
