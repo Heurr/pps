@@ -1,6 +1,8 @@
+from typing import Any
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.constants import LogFormatType
+from app.constants import Entity, LogFormatType
 
 
 class Settings(BaseSettings):
@@ -32,6 +34,10 @@ class Settings(BaseSettings):
         )
 
     @property
+    def redis_dsn(self) -> str:
+        return f"redis://{self.REDIS_USER}:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}"
+
+    @property
     def is_dev(self) -> bool:
         return self.APP_ENV.lower() == "dev"
 
@@ -52,6 +58,63 @@ class LogSettings(BaseSettings):
     LOG_FORMAT: LogFormatType = LogFormatType.DEFAULT
 
     model_config = SettingsConfigDict(env_prefix="PS_")
+
+
+class ConsumerSettings(Settings):
+    RABBITMQ_HOST: str
+    RABBITMQ_PORT: int = 5672
+    RABBITMQ_USER: str = "op-od"
+    RABBITMQ_PASSWORD: str
+    RABBITMQ_VIRTUAL_HOST: str
+    RABBITMQ_EXCHANGE_NAME: str
+    RABBITMQ_PREFETCH_COUNT: int = 200
+    RABBITMQ_CREATE_QUEUES: bool = False
+    RABBITMQ_QUEUE_MAPPING: dict[Entity, Any] = {}
+    RABBITMQ_ENTITIES: dict[Entity, Any] = {}
+    RABBITMQ_QUEUE_POSTFIX: str | None = None
+    REDIS_PUSH_INTERVAL: int = 1
+    REDIS_CAPACITY_THRESHOLD_IN_PERCENT: int = 95
+    MESSAGE_ARCHIVE_RETENTION: int = 5  # days
+
+    def rabbitmq_dsn(self, entity: Entity | None = None) -> str:
+        if entity is None:
+            rmq_host = self.RABBITMQ_HOST
+            rmq_port = self.RABBITMQ_PORT
+        else:
+            queue_settings = self.RABBITMQ_QUEUE_MAPPING.get(entity, {})
+            rmq_host = queue_settings.get("rmqHost", self.RABBITMQ_HOST)
+            rmq_port = queue_settings.get("rmqPort", self.RABBITMQ_PORT)
+
+        return "amqp://{}:{}@{}:{}/{}".format(
+            self.RABBITMQ_USER,
+            self.RABBITMQ_PASSWORD,
+            rmq_host,
+            rmq_port,
+            self.RABBITMQ_VIRTUAL_HOST,
+        )
+
+    def rabbitmq_entity_queue_mapping(self, entity) -> dict:
+        return self.RABBITMQ_QUEUE_MAPPING.get(entity, {})
+
+    def rabbitmq_exchange_name(self, entity: Entity | None = None) -> str:
+        if entity is None:
+            return self.RABBITMQ_EXCHANGE_NAME
+        return self.rabbitmq_entity_queue_mapping(entity).get(
+            "exchange", self.RABBITMQ_EXCHANGE_NAME
+        )
+
+    def redis_push_interval(self, entity: Entity | None = None) -> float:
+        if entity is None:
+            return self.REDIS_PUSH_INTERVAL
+        return self.rabbitmq_entity_queue_mapping(entity).get(
+            "redisPushInterval", self.REDIS_PUSH_INTERVAL
+        )
+
+    def country_filter(self, entity: Entity | None) -> list[str]:
+        if not entity:
+            return []
+
+        return self.RABBITMQ_ENTITIES.get(entity, {}).get("countryFilter", [])
 
 
 base_settings = Settings()
