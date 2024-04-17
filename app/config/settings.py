@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     POSTGRES_DB_NAME: str = "price-services"
     POSTGRES_DB_PASSWORD: str
 
+    REDIS_HOST: str = ""
+    REDIS_PORT: int = 6379
+    REDIS_USER: str = ""
+    REDIS_PASSWORD: str = ""
+
     PROMETHEUS_PORT: int = 9090
 
     SENTRY_DSN: str | None = None

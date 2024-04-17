@@ -3,9 +3,11 @@ name: price-services
 
 services:
   api:
+#    network_mode: host
     build:
       context: .
       target: development
+      network: host
     environment:
       PS_APP_ENV: dev
       PS_LOG_LEVEL: info
@@ -14,6 +16,17 @@ services:
       PS_POSTGRES_DB_PASSWORD: alpharius
       PS_API_URL: "http://price-services-api"
       PS_APP_SECRET: pz8BL6OTBbtiPyONEXk00rFPX9WTXIeRJ8oI3CKv79U
+
+      # env values only needed for testing RabbitMQ workers
+      PS_RABBITMQ_HOST: rabbitmq
+      PS_RABBITMQ_USER: user
+      PS_RABBITMQ_PASSWORD: passw0rd
+      PS_RABBITMQ_VIRTUAL_HOST: op-vh-dev
+      PS_RABBITMQ_EXCHANGE_NAME: op-ex
+      PS_RABBITMQ_QUEUE_MAPPING: '{}'
+      # env values only needed for testing Message Workers
+      PS_REDIS_HOST: redis
+
     volumes:
       - ./alembic:/usr/src/app/alembic
       - ./app:/usr/src/app/app
@@ -30,6 +43,7 @@ services:
       - -c
       - |
         scripts/wait-for.sh -t 10 db:5432 -- echo "Postgres DB is ready"
+        scripts/wait-for.sh -t 10 rabbitmq:5672 -- echo "RabbitMQ is ready"
         scripts/run-api-reload.sh
     depends_on:
       - db
@@ -46,3 +60,25 @@ services:
       - "5434:5432"
     volumes:
       - ./docker/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: passw0rd
+      RABBITMQ_DEFAULT_VHOST: op-vh-dev
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  redis:
+    image: "redis:alpine"
+    command:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /usr/local/etc/redis
+        echo "maxmemory 1073741824" > /usr/local/etc/redis/redis.conf
+        redis-server /usr/local/etc/redis/redis.conf
+    ports:
+     - "6379:6379"

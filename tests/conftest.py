@@ -3,6 +3,7 @@ from typing import Any, AsyncGenerator
 
 import pytest
 from fastapi import FastAPI
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 
 from alembic import command as alembic_command
@@ -13,6 +14,7 @@ from app.config.settings import base_settings
 from app.db.pg import drop_db_tables
 from app.schemas.shop import ShopCreateSchema, ShopDBSchema
 from app.utils import dump_to_json
+from app.utils.redis_adapter import RedisAdapter
 from tests.factories import shop_factory
 
 # pytestmark = pytest.mark.anyio
@@ -45,6 +47,13 @@ async def db_conn(db_engine) -> AsyncConnection:
     async with db_engine.begin() as conn:
         yield conn
         await conn.rollback()
+
+
+@pytest.fixture()
+async def redis() -> Redis:
+    async with RedisAdapter(base_settings.redis_dsn, decode_responses=False) as redis:
+        await redis.flushdb()
+        yield redis
 
 
 @pytest.fixture(autouse=True)
