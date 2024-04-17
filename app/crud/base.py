@@ -11,21 +11,18 @@ from app.utils import dump_to_json, utc_now
 
 DBSchemaTypeT = TypeVar("DBSchemaTypeT", bound=BaseModel)
 CreateSchemaTypeT = TypeVar("CreateSchemaTypeT", bound=BaseModel)
-UpdateSchemaTypeT = TypeVar("UpdateSchemaTypeT", bound=BaseModel)
 
 
-class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
+class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT]):
     def __init__(
         self,
         table: Table,
         db_scheme: Type[DBSchemaTypeT],
         create_scheme: Type[CreateSchemaTypeT],
-        update_scheme: Type[UpdateSchemaTypeT],
     ):
         self.table = table
         self.db_scheme = db_scheme
         self.create_scheme = create_scheme
-        self.update_scheme = update_scheme
         self.has_updated_at = "updated_at" in self.table.c
 
     @staticmethod
@@ -128,33 +125,10 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
         stmt = self.table.insert().values(all_values)
         await db_conn.execute(stmt)
 
-    async def update(
-        self, db_conn: AsyncConnection, obj_in: UpdateSchemaTypeT
-    ) -> DBSchemaTypeT:
-        """
-        Update one row using object
-
-        :param db_conn: Database connection
-        :param obj_in: Object to update with
-        :return: The updated object in db
-        """
-        values = obj_in.model_dump(
-            exclude=({"id"}),
-            exclude_unset=True,
-        )
-        stmt = (
-            self.table.update()
-            .values({**values, "updated_at": utc_now()})
-            .where(self.table.c.id == obj_in.id)  # type: ignore[attr-defined]
-            .returning(self.table)
-        )
-        row = (await db_conn.execute(stmt)).one()
-        return self.db_scheme.model_validate(row)
-
     async def upsert_many_with_version_checking(  # type: ignore[empty-body]
         self,
         db_conn: AsyncConnection,
-        entities: list[CreateSchemaTypeT | UpdateSchemaTypeT],
+        entities: list[CreateSchemaTypeT],
     ) -> list[UUID]:
         """
         Create many rows using Common Table Expression (CTE) or update while version checking
@@ -209,3 +183,9 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT, UpdateSchemaTypeT]):
         res = await db_conn.execute(stmt)
         deleted_ids = [r.id for r in res]
         return deleted_ids
+
+    async def upsert_many(  # type: ignore[empty-body]
+        self, db_conn: AsyncConnection, entities: list[CreateSchemaTypeT]
+    ) -> list[UUID]:
+        # TODO logic that samo does
+        pass

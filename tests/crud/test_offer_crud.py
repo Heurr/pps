@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy.exc import DBAPIError
 
 from app import crud
-from app.schemas.offer import OfferCreateSchema, OfferUpdateSchema
+from app.schemas.offer import OfferCreateSchema
 from tests.factories import offer_factory
 from tests.utils import compare, random_int, random_one_id
 
@@ -105,7 +105,7 @@ async def test_update_many_with_version_checking_offer(
     ]
     create_obj[0].version = offers[0].version - 1
     assert len(create_obj) == 3
-    update_objs = [OfferUpdateSchema(**offer.model_dump()) for offer in create_obj]
+    update_objs = [OfferCreateSchema(**offer.model_dump()) for offer in create_obj]
 
     res = await crud.offer.upsert_many_with_version_checking(db_conn, update_objs)
 

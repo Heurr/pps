@@ -8,8 +8,16 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from app.constants import CountryCode, CurrencyCode, ProductPriceType
+from app.constants import (
+    CountryCode,
+    CurrencyCode,
+    PriceType,
+    ProductPriceType,
+    ShopCertificate,
+)
 from app.schemas.base import BaseModel
+from app.schemas.offer import Price
+from app.schemas.shop import ShopState
 
 DBSchemaTypeT = TypeVar("DBSchemaTypeT", bound=BaseModel)
 CreateSchemaTypeT = TypeVar("CreateSchemaTypeT", bound=BaseModel)
@@ -22,6 +30,14 @@ def random_string(length: int = 16) -> str:
 
 def random_int(a: int = 1, b: int = 1000) -> int:
     return secrets.choice(range(a, b))
+
+
+def random_float(a: float = 0.0, b: float = 100.0) -> float:
+    return round(random.uniform(a, b), 2)
+
+
+def custom_uuid(index: int) -> UUID:
+    return UUID(int=index)
 
 
 def random_bool() -> bool:
@@ -47,8 +63,38 @@ def random_product_price_type() -> ProductPriceType:
     return secrets.choice(list(ProductPriceType))
 
 
+def random_shop_certificate() -> ShopCertificate:
+    return secrets.choice(list(ShopCertificate))
+
+
+def random_price_type() -> PriceType:
+    return secrets.choice(list(PriceType))
+
+
+def random_shop_state() -> ShopState:
+    return ShopState(
+        verified=random_bool(),
+        paying=random_bool(),
+        enabled=random_bool(),
+        deletable=random_bool(),
+    )
+
+
 def random_one_id() -> UUID:
     return uuid4()
+
+
+def random_prices(how_many: int = 1) -> list[Price]:
+    prices = []
+    for _i in range(how_many):
+        price = Price(
+            type=random_price_type(),
+            amount=random_int(),
+            currency_code=random_currency_code(),
+            vat=random_float(),
+        )
+        prices.append(price)
+    return prices
 
 
 def override_obj_get_db_conn(db_conn: AsyncConnection, obj: Any) -> Any:

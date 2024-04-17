@@ -1,7 +1,7 @@
 import pytest
 
 from app import crud
-from app.schemas.shop import ShopCreateSchema, ShopUpdateSchema
+from app.schemas.shop import ShopCreateSchema
 from tests.factories import shop_factory
 from tests.utils import compare, random_int, random_one_id
 
@@ -27,9 +27,9 @@ async def test_update_many_with_version_checking_shop(
     ]
     create_objs[0].version = shops[0].version - 1
     assert len(create_objs) == 3
-    update_objs = [ShopUpdateSchema(**shop.model_dump()) for shop in create_objs]
+    create_objs = [ShopCreateSchema(**shop.model_dump()) for shop in create_objs]
 
-    res = await crud.shop.upsert_many_with_version_checking(db_conn, update_objs)
+    res = await crud.shop.upsert_many_with_version_checking(db_conn, create_objs)
 
     # First one doesnt get updated, rest do
     assert len(res) == 2

@@ -6,18 +6,18 @@ from sqlalchemy import text as sa_text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.db.tables.shop import shop_table
-from app.schemas.shop import ShopCreateSchema, ShopDBSchema, ShopUpdateSchema
+from app.schemas.shop import ShopCreateSchema, ShopDBSchema
 
 from .base import CRUDBase
 
 logger = logging.getLogger(__name__)
 
 
-class CRUDShop(CRUDBase[ShopDBSchema, ShopCreateSchema, ShopUpdateSchema]):
+class CRUDShop(CRUDBase[ShopDBSchema, ShopCreateSchema]):
     async def upsert_many_with_version_checking(
         self,
         db_conn: AsyncConnection,
-        entities: list[ShopCreateSchema | ShopUpdateSchema],
+        entities: list[ShopCreateSchema],
     ) -> list[UUID]:
         data = [
             (
@@ -77,5 +77,4 @@ crud_shop = CRUDShop(
     table=shop_table,
     db_scheme=ShopDBSchema,
     create_scheme=ShopCreateSchema,
-    update_scheme=ShopUpdateSchema,
 )

@@ -6,14 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.crud.base import CRUDBase
 from app.db.tables.buyable import buyable_table
-from app.schemas.buyable import BuyableCreateSchema, BuyableDBSchema, BuyableUpdateSchema
+from app.schemas.buyable import BuyableCreateSchema, BuyableDBSchema
 
 
-class CRUDBuyable(CRUDBase[BuyableDBSchema, BuyableCreateSchema, BuyableUpdateSchema]):
+class CRUDBuyable(CRUDBase[BuyableDBSchema, BuyableCreateSchema]):
     async def upsert_many_with_version_checking(
         self,
         db_conn: AsyncConnection,
-        buyables: list[BuyableCreateSchema | BuyableUpdateSchema],
+        buyables: list[BuyableCreateSchema],
     ) -> list[UUID]:
         data = [
             (
@@ -64,5 +64,4 @@ crud_buyable = CRUDBuyable(
     table=buyable_table,
     db_scheme=BuyableDBSchema,
     create_scheme=BuyableCreateSchema,
-    update_scheme=BuyableUpdateSchema,
 )

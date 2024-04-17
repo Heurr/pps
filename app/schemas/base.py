@@ -36,5 +36,4 @@ class BaseDBSchema(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    # TODO check if needed
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

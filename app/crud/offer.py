@@ -6,18 +6,18 @@ from sqlalchemy import text as sa_text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.db.tables.offer import offer_table
-from app.schemas.offer import OfferCreateSchema, OfferDBSchema, OfferUpdateSchema
+from app.schemas.offer import OfferCreateSchema, OfferDBSchema
 
 from .base import CRUDBase
 
 logger = logging.getLogger(__name__)
 
 
-class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema, OfferUpdateSchema]):
+class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema]):
     async def upsert_many_with_version_checking(
         self,
         db_conn: AsyncConnection,
-        entities: list[OfferCreateSchema | OfferUpdateSchema],
+        entities: list[OfferCreateSchema],
     ) -> list[UUID]:
         data = [
             (
@@ -77,5 +77,4 @@ crud_offer = CRUDOffer(
     table=offer_table,
     db_scheme=OfferDBSchema,
     create_scheme=OfferCreateSchema,
-    update_scheme=OfferUpdateSchema,
 )

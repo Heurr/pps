@@ -9,17 +9,14 @@ from app.db.tables.availability import availability_table
 from app.schemas.availability import (
     AvailabilityCreateSchema,
     AvailabilityDBSchema,
-    AvailabilityUpdateSchema,
 )
 
 
-class CRUDAvailability(
-    CRUDBase[AvailabilityDBSchema, AvailabilityCreateSchema, AvailabilityUpdateSchema]
-):
+class CRUDAvailability(CRUDBase[AvailabilityDBSchema, AvailabilityCreateSchema]):
     async def upsert_many_with_version_checking(
         self,
         db_conn: AsyncConnection,
-        availabilities: list[AvailabilityCreateSchema | AvailabilityUpdateSchema],
+        availabilities: list[AvailabilityCreateSchema],
     ) -> list[UUID]:
         data = [
             (
@@ -70,5 +67,4 @@ crud_availability = CRUDAvailability(
     table=availability_table,
     db_scheme=AvailabilityDBSchema,
     create_scheme=AvailabilityCreateSchema,
-    update_scheme=AvailabilityUpdateSchema,
 )

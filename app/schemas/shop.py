@@ -21,12 +21,5 @@ class ShopCreateSchema(EntityModel):
     enabled: bool = False
 
 
-class ShopUpdateSchema(EntityModel):
-    certified: bool | None = None
-    verified: bool | None = None
-    paying: bool | None = None
-    enabled: bool | None = None
-
-
 class ShopDBSchema(ShopCreateSchema, BaseDBSchema):
     pass

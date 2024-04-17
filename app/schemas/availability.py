@@ -10,9 +10,5 @@ class AvailabilityCreateSchema(EntityModel):
     in_stock: bool = False
 
 
-class AvailabilityUpdateSchema(EntityModel):
-    in_stock: bool | None = None
-
-
 class AvailabilityDBSchema(AvailabilityCreateSchema, BaseDBSchema):
     pass

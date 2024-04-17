@@ -39,6 +39,7 @@ class StockInfo(StrEnum):
 class ShopCertificate(StrEnum):
     BLUE = "BLUE"
     GOLD = "GOLD"
+    NONE = "NONE"
 
 
 class CurrencyCode(StrEnum):

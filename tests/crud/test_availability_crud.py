@@ -1,7 +1,7 @@
 import pytest
 
 from app import crud
-from app.schemas.availability import AvailabilityCreateSchema, AvailabilityUpdateSchema
+from app.schemas.availability import AvailabilityCreateSchema
 from tests.factories import availability_factory
 from tests.utils import compare, random_int, random_one_id
 
@@ -81,7 +81,7 @@ async def test_update_many_with_version_checking_availability(
     create_objs[0].version = availabilities[0].version - 1
     assert len(create_objs) == 3
     update_objs = [
-        AvailabilityUpdateSchema(**availability.model_dump())
+        AvailabilityCreateSchema(**availability.model_dump())
         for availability in create_objs
     ]
 

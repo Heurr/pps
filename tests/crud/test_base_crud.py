@@ -1,9 +1,9 @@
 import pytest
 
 from app import crud
-from app.schemas.shop import ShopCreateSchema, ShopUpdateSchema
+from app.schemas.shop import ShopCreateSchema
 from tests.factories import shop_factory
-from tests.utils import compare, random_int
+from tests.utils import compare
 
 
 @pytest.mark.anyio
@@ -13,23 +13,6 @@ async def test_create_shop(db_conn, shops: list[ShopCreateSchema]):
     res = await crud.shop.create(db_conn, obj_in=shop_in)
     assert res
     compare(shop_in, res)
-
-
-@pytest.mark.anyio
-async def test_update_shop(db_conn, shops: list[ShopCreateSchema]):
-    to_update = shops[0]
-    await crud.shop.create(db_conn, to_update)
-
-    new_version = random_int(a=1001, b=2000)
-    create_obj = await shop_factory(
-        db_conn, create=False, shop_id=to_update.id, version=new_version
-    )
-    update_obj = ShopUpdateSchema(**create_obj.model_dump())
-    res = await crud.shop.update(db_conn, update_obj)
-
-    assert res
-    assert res.version == new_version
-    compare(create_obj, await crud.shop.get(db_conn, res.id))
 
 
 @pytest.mark.anyio
@@ -44,9 +27,9 @@ async def test_delete_shop(db_conn):
         shop_id=to_delete.id,
         version=to_delete.version,
     )
-    update_obj_schema = ShopUpdateSchema(**delete_obj.model_dump())
+    create_obj_schema = ShopCreateSchema(**delete_obj.model_dump())
 
-    res = await crud.shop.remove(db_conn, update_obj_schema)
+    res = await crud.shop.remove(db_conn, create_obj_schema)
 
     assert res == to_delete.id
     assert len(await crud.shop.get_many(db_conn)) == 1

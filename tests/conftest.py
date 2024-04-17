@@ -13,6 +13,10 @@ from app.api_app import create_api_app
 from app.config.settings import base_settings
 from app.db.pg import drop_db_tables
 from app.schemas.shop import ShopCreateSchema, ShopDBSchema
+from app.services.availability import AvailabilityService
+from app.services.buyable import BuyableService
+from app.services.offer import OfferService
+from app.services.shop import ShopService
 from app.utils import dump_to_json
 from app.utils.redis_adapter import RedisAdapter
 from tests.factories import shop_factory
@@ -71,3 +75,23 @@ async def shops_create(db_conn) -> list[ShopDBSchema]:
 @pytest.fixture
 async def shops(db_conn) -> list[ShopCreateSchema]:
     return [await shop_factory(db_conn, create=False) for _i in range(5)]
+
+
+@pytest.fixture
+async def availability_service() -> AvailabilityService:
+    yield AvailabilityService()
+
+
+@pytest.fixture
+async def buyable_service() -> BuyableService:
+    yield BuyableService()
+
+
+@pytest.fixture
+async def offer_service() -> OfferService:
+    yield OfferService()
+
+
+@pytest.fixture
+async def shop_service() -> ShopService:
+    yield ShopService()

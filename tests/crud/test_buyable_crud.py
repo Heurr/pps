@@ -1,7 +1,7 @@
 import pytest
 
 from app import crud
-from app.schemas.buyable import BuyableCreateSchema, BuyableUpdateSchema
+from app.schemas.buyable import BuyableCreateSchema
 from tests.factories import buyable_factory
 from tests.utils import compare, random_int, random_one_id
 
@@ -81,12 +81,10 @@ async def test_update_many_with_version_checking_buyable(
     ]
     update_objs[0].version = buyables[0].version - 1
     assert len(update_objs) == 3
-    update_schemas = [
-        BuyableUpdateSchema(**buyable.model_dump()) for buyable in update_objs
-    ]
+    create_objs = [BuyableCreateSchema(**buyable.model_dump()) for buyable in update_objs]
 
     # Update Buyables
-    res = await crud.buyable.upsert_many_with_version_checking(db_conn, update_schemas)
+    res = await crud.buyable.upsert_many_with_version_checking(db_conn, create_objs)
     # First one doesn't get updated, rest do
     assert len(res) == 2
 
