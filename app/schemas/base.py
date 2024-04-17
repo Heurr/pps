@@ -6,7 +6,7 @@ from pydantic import BaseModel as _BaseModel
 from pydantic import ConfigDict
 
 from app.constants import CountryCode
-from app.exceptions import ApiError
+from app.exceptions import PriceServiceError
 
 
 class BaseModel(_BaseModel):
@@ -23,13 +23,13 @@ class EntityModel(BaseModel):
         if hasattr(other, "version"):
             return self.version >= other.version
         else:
-            raise ApiError("Not supported operation, version not found")
+            raise PriceServiceError("Not supported operation, version not found")
 
     def __gt__(self, other: Type["EntityModel"]) -> bool:
         if hasattr(other, "version"):
             return self.version > other.version
         else:
-            raise ApiError("Not supported operation, version not found")
+            raise PriceServiceError("Not supported operation, version not found")
 
 
 class BaseDBSchema(BaseModel):

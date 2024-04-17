@@ -1,6 +1,10 @@
-class ApiError(Exception):
+class PriceServiceError(Exception):
     pass
 
 
-class EntityNotFoundError(ApiError):
+class EntityNotFoundError(PriceServiceError):
+    pass
+
+
+class ParserError(PriceServiceError):
     pass

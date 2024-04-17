@@ -2,6 +2,7 @@ import random
 import secrets
 import string
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, TypeVar
 from uuid import UUID, uuid4
 
@@ -80,3 +81,13 @@ def compare(
     if ignore_keys:
         [keys.remove(ignore_key) for ignore_key in ignore_keys]
     compare_obj_params(first, second, keys)
+
+
+def get_rmq_msgs(subdir: str):
+    files = [str(f) for f in Path(Path(__file__).parent / subdir / "data").iterdir()]
+    files_data = {}
+    for file in files:
+        key = file.split("/").pop().replace(".json", "")
+        with open(file) as _f:
+            files_data[key] = _f.read()
+    return files_data
