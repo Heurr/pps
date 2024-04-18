@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.api import api_router
@@ -11,6 +13,13 @@ prepare_logging()
 init_sentry(server_name="api-server", component="api")
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # noqa
+    await db_adapter.connect()
+    yield
+    await db_adapter.disconnect()
+
+
 def create_api_app():
     app = FastAPI(
         title="Price Services API",
@@ -18,15 +27,8 @@ def create_api_app():
         redoc_url=api_settings.REDOC_URL,
         openapi_url=api_settings.OPENAPI_URL,
         debug=api_settings.is_dev,
+        lifespan=lifespan,
     )
-
-    @app.on_event("startup")
-    async def startup():
-        await db_adapter.connect()
-
-    @app.on_event("shutdown")
-    async def shutdown():
-        await db_adapter.disconnect()
 
     app.include_router(api_router)
     app.include_router(v1_price_services_router)
