@@ -8,3 +8,11 @@ class EntityNotFoundError(PriceServiceError):
 
 class ParserError(PriceServiceError):
     pass
+
+
+class WorkerError(PriceServiceError):
+    pass
+
+
+class WorkerFailedParseMsgError(WorkerError):
+    pass

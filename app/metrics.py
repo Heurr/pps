@@ -5,6 +5,7 @@ from timeit import default_timer
 import prometheus_client
 from prometheus_client import Counter, Gauge, Histogram
 from prometheus_client.context_managers import Timer
+from prometheus_client.utils import INF
 
 from app.config.log import log_setting
 from app.config.settings import base_settings
@@ -13,15 +14,14 @@ logger = logging.getLogger(__name__)
 
 
 ENTITY_METRICS = Counter(
-    "entity_count",
+    "entity_metrics",
     "Total number of entities by given type, phase and status",
     ["entity", "phase", "operation"],
 )
 
-JOB_METRICS = Counter(
-    "job_processed",
-    "Total number of entities processed by the job",
-    ["job_name"],
+
+UPDATE_METRICS = Counter(
+    "update_metrics", "Number of updated entities", ["update_type", "entity"]
 )
 
 JOB_TIMER = Gauge(
@@ -34,6 +34,23 @@ API_METRICS = Histogram(
     "api_metrics",
     "API call latency stats",
     ["scope", "route"],
+    buckets=[
+        0.001,
+        0.002,
+        0.005,
+        0.01,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.5,
+        1,
+        1.5,
+        2,
+        5,
+        10,
+        INF,
+    ],
 )
 
 DB_CONNECTIONS = Gauge(

@@ -4,9 +4,9 @@ from app.schemas.offer import (
     OfferCreateSchema,
     OfferDBSchema,
 )
-from app.services.base import BaseMessageService
+from app.services.base import BaseEntityService
 
 
-class OfferService(BaseMessageService[CRUDOffer, OfferDBSchema, OfferCreateSchema]):
+class OfferService(BaseEntityService[CRUDOffer, OfferDBSchema, OfferCreateSchema]):
     def __init__(self):
         super().__init__(crud_offer, Entity.OFFER, OfferCreateSchema)

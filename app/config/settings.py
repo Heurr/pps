@@ -53,6 +53,16 @@ class ApiSettings(Settings):
     OPENAPI_URL: str = "/-/openapi.json"
 
 
+class WorkerSetting(Settings):
+    WORKER_BUFFER_SIZE: int = 100
+    WORKER_POP_TIMEOUT: float = 0.2
+    WORKER_MESSAGE_LOG_INTERVAL: int = 1000
+
+
+class ServiceSettings(Settings):
+    FORCE_ENTITY_UPDATE: bool = False
+
+
 class LogSettings(BaseSettings):
     LOG_LEVEL: str = "info"
     LOG_FORMAT: LogFormatType = LogFormatType.DEFAULT

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from pathlib import Path
 
@@ -6,7 +7,10 @@ import typer
 
 from alembic import command as alembic_command
 from alembic.config import Config as AlembicConfig
+from app.constants import Entity
 from app.utils.log import prepare_logging
+from app.utils.sentry import init_sentry
+from app.worker_app import run_message_worker
 
 prepare_logging()
 
@@ -35,6 +39,20 @@ def downgrade_db(revision: str = "base"):
 @app.command()
 def make_db_migration(message: str):
     alembic_command.revision(get_alembic_config(), message, autogenerate=True)
+
+
+@app.command()
+def run_worker(entity: Entity):
+    init_sentry(server_name=f"{entity}-worker", component="worker")
+    cname = entity.value.capitalize()
+    try:
+        asyncio.run(run_message_worker(entity))
+    except asyncio.CancelledError:
+        logger.info("%s consuming and processing task cancelled", cname)
+    except Exception as exc:
+        logger.exception("%s consuming and processing task failed", cname, exc_info=exc)
+    finally:
+        logger.info("%s consuming and processing shutdown complete", cname)
 
 
 if __name__ == "__main__":

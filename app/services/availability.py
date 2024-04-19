@@ -4,11 +4,11 @@ from app.schemas.availability import (
     AvailabilityCreateSchema,
     AvailabilityDBSchema,
 )
-from app.services.base import BaseMessageService
+from app.services.base import BaseEntityService
 
 
 class AvailabilityService(
-    BaseMessageService[
+    BaseEntityService[
         CRUDAvailability,
         AvailabilityDBSchema,
         AvailabilityCreateSchema,

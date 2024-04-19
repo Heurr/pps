@@ -1,11 +1,11 @@
 from app.constants import Entity
 from app.crud.buyable import CRUDBuyable, crud_buyable
 from app.schemas.buyable import BuyableCreateSchema, BuyableDBSchema
-from app.services.base import BaseMessageService
+from app.services.base import BaseEntityService
 
 
 class BuyableService(
-    BaseMessageService[
+    BaseEntityService[
         CRUDBuyable,
         BuyableDBSchema,
         BuyableCreateSchema,

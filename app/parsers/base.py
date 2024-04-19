@@ -38,6 +38,10 @@ class BaseParser:
         action = self.recursive_parser(["action"], msg_dict)
         return action if action else ""
 
+    def get_version(self, msg_dict: dict):
+        version = self.recursive_parser(["version"], msg_dict)
+        return int(version) if version is not None else None
+
     def parse_message_body(self, msg: bytes) -> MessageSchema | InvalidMessageSchema:
         try:
             json_dict: dict = orjson.loads(msg)

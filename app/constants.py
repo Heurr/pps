@@ -7,9 +7,9 @@ class LogFormatType(StrEnum):
 
 
 class PriceType(StrEnum):
-    REGULAR = "REGULAR"
-    DISCOUNT = "DISCOUNT"
-    MEMBERSHIP = "MEMBERSHIP"
+    REGULAR = "regular"
+    DISCOUNT = "discount"
+    MEMBERSHIP = "membership"
 
 
 class CountryCode(StrEnum):
@@ -34,12 +34,6 @@ class StockInfo(StrEnum):
     IN_STOCK = "IN_STOCK"
     PREORDER = "PREORDER"
     OUT_OF_STOCK = "OUT_OF_STOCK"
-
-
-class ShopCertificate(StrEnum):
-    BLUE = "BLUE"
-    GOLD = "GOLD"
-    NONE = "NONE"
 
 
 class CurrencyCode(StrEnum):
@@ -71,6 +65,12 @@ class Entity(StrEnum):
     OFFER = "offer"
     BUYABLE = "buyable"
     AVAILABILITY = "availability"
+
+
+class Action(StrEnum):
+    DELETE = "delete"
+    CREATE = "create"
+    UPDATE = "update"
 
 
 PLATFORM_COUNTRY_MAP = {

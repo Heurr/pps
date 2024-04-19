@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any, AsyncGenerator
 
 import pytest
 from fastapi import FastAPI
@@ -10,16 +9,25 @@ from alembic import command as alembic_command
 from alembic.config import Config as AlembicConfig
 from app.api.deps import get_db_conn
 from app.api_app import create_api_app
-from app.config.settings import base_settings
+from app.config.settings import WorkerSetting, base_settings
+from app.constants import Entity
 from app.db.pg import drop_db_tables
-from app.schemas.shop import ShopCreateSchema, ShopDBSchema
+from app.schemas.availability import AvailabilityMessageSchema
+from app.schemas.buyable import BuyableMessageSchema
+from app.schemas.offer import OfferMessageSchema
+from app.schemas.shop import ShopCreateSchema, ShopDBSchema, ShopMessageSchema
 from app.services.availability import AvailabilityService
 from app.services.buyable import BuyableService
 from app.services.offer import OfferService
 from app.services.shop import ShopService
 from app.utils import dump_to_json
 from app.utils.redis_adapter import RedisAdapter
+from app.workers.availability import AvailabilityMessageWorker
+from app.workers.buyable import BuyableMessageWorker
+from app.workers.offer import OfferMessageWorker
+from app.workers.shop import ShopMessageWorker
 from tests.factories import shop_factory
+from tests.utils import override_obj_get_db_conn
 
 # pytestmark = pytest.mark.anyio
 
@@ -30,7 +38,7 @@ def anyio_backend():
 
 
 @pytest.fixture(scope="session")
-async def db_engine() -> AsyncGenerator[AsyncEngine, Any]:
+async def db_engine() -> AsyncEngine:
     engine = create_async_engine(
         base_settings.postgres_db_dsn,
         json_serializer=dump_to_json,
@@ -95,3 +103,62 @@ async def offer_service() -> OfferService:
 @pytest.fixture
 async def shop_service() -> ShopService:
     yield ShopService()
+
+
+@pytest.fixture
+def worker_settings() -> WorkerSetting:
+    settings = WorkerSetting()
+    return settings
+
+
+@pytest.fixture
+async def worker_redis(worker_settings) -> Redis:
+    async with RedisAdapter(
+        worker_settings.redis_dsn, encoding="utf-8", decode_responses=True
+    ) as redis:
+        await redis.flushdb()
+        yield redis
+
+
+@pytest.fixture
+async def buyable_worker(db_engine, db_conn, worker_settings, worker_redis):
+    yield override_obj_get_db_conn(
+        db_conn,
+        BuyableMessageWorker(
+            Entity.BUYABLE, worker_settings, db_engine, worker_redis, BuyableMessageSchema
+        ),
+    )
+
+
+@pytest.fixture
+async def availability_worker(db_engine, db_conn, worker_settings, worker_redis):
+    yield override_obj_get_db_conn(
+        db_conn,
+        AvailabilityMessageWorker(
+            Entity.AVAILABILITY,
+            worker_settings,
+            db_engine,
+            worker_redis,
+            AvailabilityMessageSchema,
+        ),
+    )
+
+
+@pytest.fixture
+async def offer_worker(db_engine, db_conn, worker_settings, worker_redis):
+    yield override_obj_get_db_conn(
+        db_conn,
+        OfferMessageWorker(
+            Entity.OFFER, worker_settings, db_engine, worker_redis, OfferMessageSchema
+        ),
+    )
+
+
+@pytest.fixture
+async def shop_worker(db_engine, db_conn, worker_settings, worker_redis):
+    yield override_obj_get_db_conn(
+        db_conn,
+        ShopMessageWorker(
+            Entity.SHOP, worker_settings, db_engine, worker_redis, ShopMessageSchema
+        ),
+    )

@@ -14,6 +14,23 @@ test:
         POSTGRES_PASSWORD: alpharius
         POSTGRES_DB: price-services
 
+    - name: rabbitmq:3.13-management
+      alias: rabbitmq
+      variables:
+        RABBITMQ_DEFAULT_USER: user
+        RABBITMQ_DEFAULT_PASS: passw0rd
+        RABBITMQ_DEFAULT_VHOST: op-vh-dev
+
+    - name: redis:alpine
+      alias: redis
+      command:
+        - /bin/sh
+        - -c
+        - |
+          mkdir -p /usr/local/etc/redis
+          echo "maxmemory 1073741824" > /usr/local/etc/redis/redis.conf
+          redis-server /usr/local/etc/redis/redis.conf
+
   variables:
     PS_APP_SECRET: pz8BL6OTBbtiPyONEXk00rFPX9WTXIeRJ8oI3CKv79U
     PS_APP_ENV: dev
@@ -22,10 +39,20 @@ test:
     PS_POSTGRES_DB_HOST: db
     PS_API_URL: "http://price-services-api"
     PS_POSTGRES_DB_PASSWORD: alpharius
+
+    PS_RABBITMQ_HOST: rabbitmq
+    PS_RABBITMQ_USER: user
+    PS_RABBITMQ_PASSWORD: passw0rd
+    PS_RABBITMQ_VIRTUAL_HOST: op-vh-dev
+    PS_RABBITMQ_EXCHANGE_NAME: op-ex
+    PS_RABBITMQ_QUEUE_MAPPING: '{}'
+    PS_REDIS_HOST: redis
   needs:
     - build-dev
   script:
     - scripts/wait-for.sh -t 10 db:5432 -- echo "Postgres DB is ready"
+    - scripts/wait-for.sh -t 10 redis:6379 -- echo "Redis is ready"
+    - scripts/wait-for.sh -t 20 rabbitmq:5672 -- echo "RabbitMQ is ready"
     - scripts/tests.sh
   only:
     refs:
