@@ -2,88 +2,65 @@ import pytest
 
 from app import crud
 from app.schemas.buyable import BuyableCreateSchema
-from tests.factories import buyable_factory
-from tests.utils import compare, random_int, random_one_id
-
-
-@pytest.fixture
-async def buyables(db_conn) -> list[BuyableCreateSchema]:
-    return [await buyable_factory(db_conn, create=False) for _i in range(5)]
+from tests.factories import offer_factory
+from tests.utils import custom_uuid
 
 
 @pytest.mark.anyio
-async def test_create_buyables(db_conn):
-    buyable_0 = await buyable_factory(db_conn)
-    buyable_1_id = random_one_id()
-    buyable_2 = await buyable_factory(db_conn)
-    buyable_3_id = random_one_id()
-
+async def test_update_buyables(db_conn):
+    offers = [
+        await offer_factory(db_conn, offer_id=custom_uuid(i), buyable_version=1)
+        for i in range(4)
+    ]
     buyables_in = [
-        await buyable_factory(
-            db_conn,
-            create=False,
-            buyable_id=buyable_0.id,
-            version=buyable_0.version - 1,
-            country_code=buyable_0.country_code,
-        ),
-        await buyable_factory(
-            db_conn,
-            create=False,
-            buyable_id=buyable_1_id,
-            version=random_int(a=1001, b=2000),
-        ),
-        await buyable_factory(
-            db_conn,
-            create=False,
-            buyable_id=buyable_2.id,
-            country_code=buyable_2.country_code,
-            version=random_int(a=1001, b=2000),
-        ),
-        await buyable_factory(
-            db_conn,
-            create=False,
-            buyable_id=buyable_3_id,
-            version=random_int(a=1001, b=2000),
-        ),
+        BuyableCreateSchema(
+            id=custom_uuid(i),
+            country_code=offers[i].country_code,
+            buyable=False,
+            version=i,
+        )
+        for i in range(4)
     ]
-    inserted_ids = await crud.buyable.upsert_many(db_conn, buyables_in)
-    assert set(inserted_ids) == {buyable_0.id, buyable_1_id, buyable_2.id, buyable_3_id}
 
-    buyables_in_db = await crud.buyable.get_many(db_conn)
-    assert len(buyables_in_db) == 4
+    # First two buyables are not updated because of old version
+    # Second two buyables are updated
+    updated_ids = await crud.buyable.upsert_many(db_conn, buyables_in)
+    assert set(updated_ids) == {offers[2].id, offers[3].id}
 
-    buyable_in_db_map = {s.id: s for s in buyables_in_db}
-    compare(buyables_in[0], buyable_in_db_map[buyables_in[0].id])
-    compare(buyables_in[1], buyable_in_db_map[buyables_in[1].id])
-    compare(buyables_in[2], buyable_in_db_map[buyables_in[2].id])
-    compare(buyables_in[3], buyable_in_db_map[buyables_in[3].id])
+    offers_in_db = await crud.offer.get_many(db_conn)
+    offers_in_db.sort(key=lambda o: o.id)
+    assert len(offers) == 4
+    for i in range(4):
+        old_offer = offers[i].model_dump()
+        new_offer = offers_in_db[i].model_dump()
+        if i >= 2:
+            old_offer["buyable"] = False
+            old_offer["buyable_version"] = i
+        assert old_offer == new_offer
 
 
 @pytest.mark.anyio
-async def test_update_buyables(db_conn, buyables: list[BuyableCreateSchema]):
-    # Create Buyables
-    await crud.buyable.create_many(db_conn, buyables)
-
-    # Create update objects
-    update_objs = [
-        await buyable_factory(
-            db_conn,
-            create=False,
-            buyable_id=buyable.id,
-            country_code=buyable.country_code,
-            version=random_int(a=1001, b=2000),
-        )
-        for buyable in buyables[:3]
+async def test_delete_buyables(db_conn):
+    offers = [
+        await offer_factory(db_conn, offer_id=custom_uuid(i), buyable_version=1)
+        for i in range(4)
     ]
-    update_objs[0].version = buyables[0].version - 1
-    assert len(update_objs) == 3
-    create_objs = [BuyableCreateSchema(**buyable.model_dump()) for buyable in update_objs]
+    ids_to_delete = [(custom_uuid(i), i) for i in range(4)]
 
-    # Update Buyables
-    res = await crud.buyable.upsert_many(db_conn, create_objs)
-    # First one doesn't get updated, rest do
-    assert len(res) == 3
+    # First two buyables are not deleted because of old version
+    # Second two buyables are deleted (=set to NULL)
+    deleted_ids = await crud.buyable.remove_many_with_version_checking(
+        db_conn, ids_to_delete
+    )
+    assert set(deleted_ids) == {offers[2].id, offers[3].id}
 
-    assert res
-    for res_buyable in update_objs[1:]:
-        compare(res_buyable, (await crud.buyable.get_in(db_conn, [res_buyable.id]))[0])
+    offers_in_db = await crud.offer.get_many(db_conn)
+    offers_in_db.sort(key=lambda o: o.id)
+    assert len(offers) == 4
+    for i in range(4):
+        old_offer = offers[i].model_dump()
+        new_offer = offers_in_db[i].model_dump()
+        if i >= 2:
+            old_offer["buyable"] = None
+            old_offer["buyable_version"] = i
+        assert old_offer == new_offer

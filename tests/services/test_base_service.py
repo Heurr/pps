@@ -6,10 +6,10 @@ from tests.utils import custom_uuid
 
 @pytest.fixture
 def base_message_service(mocker):
-    mock_crud = mocker.AsyncMock()
+    crud_from_entity_mock = mocker.patch("app.services.base.crud_from_entity")
+    crud_from_entity_mock.return_value = mocker.AsyncMock()
     mock_entity = mocker.Mock()
-    mock_create_schema = mocker.Mock()
-    return BaseEntityService(mock_crud, mock_entity, mock_create_schema)
+    return BaseEntityService(mock_entity)
 
 
 @pytest.mark.anyio

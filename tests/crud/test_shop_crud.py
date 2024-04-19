@@ -12,8 +12,6 @@ async def test_update_shops(db_conn, shops: list[ShopCreateSchema]):
     await crud.shop.create_many(db_conn, shops)
     create_objs = [
         await shop_factory(
-            db_conn,
-            create=False,
             shop_id=shop.id,
             version=random_int(a=1001, b=2000),
             country_code=shop.country_code,
@@ -47,25 +45,17 @@ async def test_create_shops(db_conn):
 
     shops_in = [
         await shop_factory(
-            db_conn,
-            create=False,
             shop_id=shop_0.id,
             version=shop_0.version - 1,
             country_code=shop_0.country_code,
         ),
+        await shop_factory(shop_id=shop_1_id, version=random_int(a=1001, b=2000)),
         await shop_factory(
-            db_conn, create=False, shop_id=shop_1_id, version=random_int(a=1001, b=2000)
-        ),
-        await shop_factory(
-            db_conn,
-            create=False,
             shop_id=shop_2.id,
             version=random_int(a=1001, b=2000),
             country_code=shop_2.country_code,
         ),
-        await shop_factory(
-            db_conn, create=False, shop_id=shop_3_id, version=random_int(a=1001, b=2000)
-        ),
+        await shop_factory(shop_id=shop_3_id, version=random_int(a=1001, b=2000)),
     ]
 
     inserted_ids = await crud.shop.upsert_many(db_conn, shops_in)

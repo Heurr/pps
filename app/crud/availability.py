@@ -1,32 +1,20 @@
-from typing import Type
-
-from sqlalchemy import Table
-
-from app.crud.base import CRUDBase
-from app.db.tables.availability import availability_table
+from app.crud.simple_entity import CRUDSimpleEntityBase
+from app.db.tables.offer import offer_table
 from app.schemas.availability import (
     AvailabilityCreateSchema,
-    AvailabilityDBSchema,
 )
+from app.schemas.offer import OfferDBSchema
 
 
-class CRUDAvailability(CRUDBase[AvailabilityDBSchema, AvailabilityCreateSchema]):
-    def __init__(
-        self,
-        table: Table,
-        db_scheme: Type[AvailabilityDBSchema],
-        create_scheme: Type[AvailabilityCreateSchema],
-    ):
+class CRUDAvailability(CRUDSimpleEntityBase[OfferDBSchema, AvailabilityCreateSchema]):
+    def __init__(self):
         super().__init__(
-            table,
-            db_scheme,
-            create_scheme,
-            ["version", "in_stock", "updated_at"],
+            offer_table,
+            OfferDBSchema,
+            AvailabilityCreateSchema,
+            "in_stock",
+            "availability_version",
         )
 
 
-crud_availability = CRUDAvailability(
-    table=availability_table,
-    db_scheme=AvailabilityDBSchema,
-    create_scheme=AvailabilityCreateSchema,
-)
+crud_availability = CRUDAvailability()

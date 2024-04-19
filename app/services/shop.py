@@ -1,5 +1,4 @@
 from app.constants import Entity
-from app.crud.shop import CRUDShop, crud_shop
 from app.schemas.shop import (
     ShopCreateSchema,
     ShopDBSchema,
@@ -7,6 +6,6 @@ from app.schemas.shop import (
 from app.services.base import BaseEntityService
 
 
-class ShopService(BaseEntityService[CRUDShop, ShopDBSchema, ShopCreateSchema]):
+class ShopService(BaseEntityService[ShopDBSchema, ShopCreateSchema]):
     def __init__(self):
-        super().__init__(crud_shop, Entity.SHOP, ShopCreateSchema)
+        super().__init__(Entity.SHOP)

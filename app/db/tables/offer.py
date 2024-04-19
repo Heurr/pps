@@ -14,6 +14,10 @@ offer_table = sa.Table(
     sa.Column("currency_code", sa.Enum(CurrencyCode), nullable=False),
     sa.Column("price", sa.Numeric(PRICE_PRECISION, PRICE_SCALE), nullable=False),
     sa.Column("version", sa.BigInteger, nullable=False),
+    sa.Column("in_stock", sa.Boolean, nullable=True),
+    sa.Column("availability_version", sa.BigInteger, nullable=False, server_default="-1"),
+    sa.Column("buyable", sa.Boolean, nullable=True),
+    sa.Column("buyable_version", sa.BigInteger, nullable=False, server_default="-1"),
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
 )

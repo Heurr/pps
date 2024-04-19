@@ -2,100 +2,65 @@ import pytest
 
 from app import crud
 from app.schemas.availability import AvailabilityCreateSchema
-from tests.factories import availability_factory
-from tests.utils import compare, random_int, random_one_id
-
-
-@pytest.fixture
-async def availabilities(db_conn) -> list[AvailabilityCreateSchema]:
-    return [await availability_factory(db_conn, create=False) for _i in range(5)]
+from tests.factories import offer_factory
+from tests.utils import custom_uuid
 
 
 @pytest.mark.anyio
-async def test_create_availabilities(db_conn):
-    availability_0 = await availability_factory(db_conn)
-    availability_1_id = random_one_id()
-    availability_2 = await availability_factory(db_conn)
-    availability_3_id = random_one_id()
-
+async def test_update_availabilities(db_conn):
+    offers = [
+        await offer_factory(db_conn, offer_id=custom_uuid(i), availability_version=1)
+        for i in range(4)
+    ]
     availabilities_in = [
-        await availability_factory(
-            db_conn,
-            create=False,
-            availability_id=availability_0.id,
-            country_code=availability_0.country_code,
-            version=availability_0.version - 1,
-        ),
-        await availability_factory(
-            db_conn,
-            create=False,
-            availability_id=availability_1_id,
-            version=random_int(a=1001, b=2000),
-        ),
-        await availability_factory(
-            db_conn,
-            create=False,
-            availability_id=availability_2.id,
-            country_code=availability_2.country_code,
-            version=random_int(a=1001, b=2000),
-        ),
-        await availability_factory(
-            db_conn,
-            create=False,
-            availability_id=availability_3_id,
-            version=random_int(a=1001, b=2000),
-        ),
+        AvailabilityCreateSchema(
+            id=custom_uuid(i),
+            country_code=offers[i].country_code,
+            in_stock=True,
+            version=i,
+        )
+        for i in range(4)
     ]
 
-    inserted_ids = await crud.availability.upsert_many(db_conn, availabilities_in)
-    assert set(inserted_ids) == {
-        availability_0.id,
-        availability_1_id,
-        availability_2.id,
-        availability_3_id,
-    }
+    # First two availabilities are not updated because of old version
+    # Second two availabilities are updated
+    updated_ids = await crud.availability.upsert_many(db_conn, availabilities_in)
+    assert set(updated_ids) == {offers[2].id, offers[3].id}
 
-    availabilities_in_db = await crud.availability.get_many(db_conn)
-    assert len(availabilities_in_db) == 4
-
-    availability_map = {s.id: s for s in availabilities_in_db}
-    compare(availabilities_in[0], availability_map[availabilities_in[0].id])
-    compare(availabilities_in[1], availability_map[availabilities_in[1].id])
-    compare(availabilities_in[2], availability_map[availabilities_in[2].id])
-    compare(availabilities_in[3], availability_map[availabilities_in[3].id])
+    offers_in_db = await crud.offer.get_many(db_conn)
+    offers_in_db.sort(key=lambda o: o.id)
+    assert len(offers) == 4
+    for i in range(4):
+        old_offer = offers[i].model_dump()
+        new_offer = offers_in_db[i].model_dump()
+        if i >= 2:
+            old_offer["in_stock"] = True
+            old_offer["availability_version"] = i
+        assert old_offer == new_offer
 
 
 @pytest.mark.anyio
-async def test_update_availabilities(
-    db_conn, availabilities: list[AvailabilityCreateSchema]
-):
-    await crud.availability.create_many(db_conn, availabilities)
-
-    create_objs = [
-        await availability_factory(
-            db_conn,
-            create=False,
-            availability_id=availability.id,
-            country_code=availability.country_code,
-            version=random_int(a=1001, b=2000),
-        )
-        for availability in availabilities[:3]
+async def test_delete_availabilities(db_conn):
+    offers = [
+        await offer_factory(db_conn, offer_id=custom_uuid(i), availability_version=1)
+        for i in range(4)
     ]
-    create_objs[0].version = availabilities[0].version - 1
-    assert len(create_objs) == 3
-    update_objs = [
-        AvailabilityCreateSchema(**availability.model_dump())
-        for availability in create_objs
-    ]
+    ids_to_delete = [(custom_uuid(i), i) for i in range(4)]
 
-    res = await crud.availability.upsert_many(db_conn, update_objs)
+    # First two availabilities are not deleted because of old version
+    # Second two availabilities are deleted (=set to NULL)
+    deleted_ids = await crud.availability.remove_many_with_version_checking(
+        db_conn, ids_to_delete
+    )
+    assert set(deleted_ids) == {offers[2].id, offers[3].id}
 
-    # All get update since there is no version check
-    assert len(res) == 3
-
-    assert res
-    for res_availability in create_objs[1:]:
-        compare(
-            res_availability,
-            (await crud.availability.get_in(db_conn, [res_availability.id]))[0],
-        )
+    offers_in_db = await crud.offer.get_many(db_conn)
+    offers_in_db.sort(key=lambda o: o.id)
+    assert len(offers) == 4
+    for i in range(4):
+        old_offer = offers[i].model_dump()
+        new_offer = offers_in_db[i].model_dump()
+        if i >= 2:
+            old_offer["in_stock"] = None
+            old_offer["availability_version"] = i
+        assert old_offer == new_offer

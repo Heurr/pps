@@ -22,17 +22,26 @@ class EntityModel(BaseModel):
     version: int
     country_code: CountryCode
 
+    @property
+    def version_column(self) -> str:
+        """Override to return entity version column name in database"""
+        return "version"
+
     def __ge__(self, other: EntityModel) -> bool:
-        if hasattr(other, "version"):
-            return self.version >= other.version
+        if hasattr(other, self.version_column):
+            return self.version >= getattr(other, self.version_column)
         else:
-            raise PriceServiceError("Not supported operation, version not found")
+            raise PriceServiceError(
+                f"Not supported operation, {self.version_column} not found"
+            )
 
     def __gt__(self, other: EntityModel) -> bool:
-        if hasattr(other, "version"):
-            return self.version > other.version
+        if hasattr(other, self.version_column):
+            return self.version > getattr(other, self.version_column)
         else:
-            raise PriceServiceError("Not supported operation, version not found")
+            raise PriceServiceError(
+                f"Not supported operation, {self.version_column} not found"
+            )
 
 
 class BaseDBSchema(BaseModel):

@@ -38,6 +38,10 @@ class OfferCreateSchema(EntityModel):
     shop_id: UUID
     price: float
     currency_code: CurrencyCode
+    in_stock: bool | None = None
+    buyable: bool | None = None
+    availability_version: int = -1
+    buyable_version: int = -1
 
 
 class OfferDBSchema(OfferCreateSchema, BaseDBSchema):

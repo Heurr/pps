@@ -9,13 +9,13 @@ from tests.utils import compare, random_int, random_one_id
 
 @pytest.fixture
 async def offers(db_conn) -> list[OfferCreateSchema]:
-    return [await offer_factory(db_conn, create=False) for _i in range(5)]
+    return [await offer_factory() for _ in range(5)]
 
 
 @pytest.mark.anyio
 async def test_create_offer_test_numeric_limit_after_decimal(db_conn):
     price = 123.654194949169149
-    offer_in = await offer_factory(db_conn, price=price, create=False)
+    offer_in = await offer_factory(price=price)
 
     res = (await crud.offer.create_many(db_conn, [offer_in]))[0]
     assert res
@@ -27,7 +27,7 @@ async def test_create_offer_test_numeric_limit_after_decimal(db_conn):
 async def test_create_offer_test_numeric_limit_before_decimal(db_conn):
     # Max value is 10^10
     price = (10**10 - 1) + 0.524
-    offer_in = await offer_factory(db_conn, price=price, create=False)
+    offer_in = await offer_factory(price=price)
 
     res = (await crud.offer.create_many(db_conn, [offer_in]))[0]
     assert res
@@ -39,7 +39,7 @@ async def test_create_offer_test_numeric_limit_before_decimal(db_conn):
 async def test_create_offer_test_numeric_limit_before_decimal_error(db_conn):
     # Max value is 10^10
     price = (10**10) + 0.524
-    offer_in = await offer_factory(db_conn, price=price, create=False)
+    offer_in = await offer_factory(price=price)
 
     with pytest.raises(DBAPIError):
         await crud.offer.create_many(db_conn, [offer_in])
@@ -54,25 +54,17 @@ async def test_create_offers(db_conn):
 
     offers_in = [
         await offer_factory(
-            db_conn,
-            create=False,
             offer_id=offer_0.id,
             version=offer_0.version - 1,
             country_code=offer_0.country_code,
         ),
+        await offer_factory(offer_id=offer_1_id, version=random_int(a=1001, b=2000)),
         await offer_factory(
-            db_conn, create=False, offer_id=offer_1_id, version=random_int(a=1001, b=2000)
-        ),
-        await offer_factory(
-            db_conn,
-            create=False,
             offer_id=offer_2.id,
             version=random_int(a=1001, b=2000),
             country_code=offer_2.country_code,
         ),
-        await offer_factory(
-            db_conn, create=False, offer_id=offer_3_id, version=random_int(a=1001, b=2000)
-        ),
+        await offer_factory(offer_id=offer_3_id, version=random_int(a=1001, b=2000)),
     ]
 
     inserted_ids = await crud.offer.upsert_many(db_conn, offers_in)
@@ -93,8 +85,6 @@ async def test_update_offers(db_conn, offers: list[OfferCreateSchema]):
     await crud.offer.create_many(db_conn, offers)
     create_obj = [
         await offer_factory(
-            db_conn,
-            create=False,
             offer_id=offer.id,
             country_code=offer.country_code,
             version=random_int(a=1001, b=2000),

@@ -1,15 +1,9 @@
 from app.constants import Entity
-from app.crud.buyable import CRUDBuyable, crud_buyable
-from app.schemas.buyable import BuyableCreateSchema, BuyableDBSchema
-from app.services.base import BaseEntityService
+from app.schemas.buyable import BuyableCreateSchema
+from app.schemas.offer import OfferDBSchema
+from app.services.simple_entity import SimpleEntityBaseService
 
 
-class BuyableService(
-    BaseEntityService[
-        CRUDBuyable,
-        BuyableDBSchema,
-        BuyableCreateSchema,
-    ]
-):
+class BuyableService(SimpleEntityBaseService[OfferDBSchema, BuyableCreateSchema]):
     def __init__(self):
-        super().__init__(crud_buyable, Entity.BUYABLE, BuyableCreateSchema)
+        super().__init__(Entity.BUYABLE)

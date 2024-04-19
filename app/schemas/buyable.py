@@ -3,7 +3,11 @@ from uuid import UUID
 from pydantic import Field
 
 from app.constants import CountryCode
-from app.schemas.base import BaseDBSchema, BaseModel, EntityModel, MessageModel
+from app.schemas.base import (
+    BaseModel,
+    EntityModel,
+    MessageModel,
+)
 
 
 class BuyableLegacy(BaseModel):
@@ -21,8 +25,8 @@ class BuyableMessageSchema(MessageModel):
 
 
 class BuyableCreateSchema(EntityModel):
-    buyable: bool = False
+    buyable: bool
 
-
-class BuyableDBSchema(BuyableCreateSchema, BaseDBSchema):
-    pass
+    @property
+    def version_column(self) -> str:
+        return "buyable_version"

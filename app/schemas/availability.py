@@ -3,7 +3,11 @@ from uuid import UUID
 from pydantic import Field
 
 from app.constants import CountryCode, StockInfo
-from app.schemas.base import BaseDBSchema, BaseModel, EntityModel, MessageModel
+from app.schemas.base import (
+    BaseModel,
+    EntityModel,
+    MessageModel,
+)
 
 
 class AvailabilityLegacy(BaseModel):
@@ -27,6 +31,6 @@ class AvailabilityMessageSchema(MessageModel):
 class AvailabilityCreateSchema(EntityModel):
     in_stock: bool = False
 
-
-class AvailabilityDBSchema(AvailabilityCreateSchema, BaseDBSchema):
-    pass
+    @property
+    def version_column(self) -> str:
+        return "availability_version"

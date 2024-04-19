@@ -1,10 +1,11 @@
-.PHONY: help
+    .PHONY: help
 help: # Show help for each of the Makefile recipes
 	@grep -E '^[a-zA-Z0-9 -]+:.*#'  Makefile | sort | while read -r l; do printf "\033[1;32m$$(echo $$l | cut -f 1 -d':')\033[00m: $$(echo $$l | cut -f 2- -d'#')\n"; done
 
 DOCKER_ID ?= price-services-api-1
 DOCKER_DB_ID ?= price-services-db-1
 TA ?= -v tests/
+MSG ?= ""
 
 setup-pre-commit: # Setup pre-commit in the current env
 	pip3 install pre-commit
@@ -41,3 +42,8 @@ db: # Connect to db with pgcli
 
 lint: # Run the every linting script and a format script
 	pre-commit run --all-files
+
+migration: # Create alembic migration script from the current state, set MSG for migration comment message
+	docker exec -it $(DOCKER_ID) python app/manage.py make-db-migration "$(MSG)"
+	docker exec -it $(DOCKER_ID) python app/manage.py upgrade-db
+	docker exec -it $(DOCKER_ID) chown -R `id -u`:`id -g` alembic/versions/
