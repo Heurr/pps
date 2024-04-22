@@ -79,7 +79,7 @@ class ConsumerSettings(Settings):
     RABBITMQ_EXCHANGE_NAME: str
     RABBITMQ_PREFETCH_COUNT: int = 200
     RABBITMQ_CREATE_QUEUES: bool = False
-    RABBITMQ_QUEUE_MAPPING: dict[Entity, Any] = {}
+    RABBITMQ_QUEUE_MAPPING: dict[Entity, dict] = {}
     RABBITMQ_ENTITIES: dict[Entity, Any] = {}
     RABBITMQ_QUEUE_POSTFIX: str | None = None
     REDIS_PUSH_INTERVAL: int = 1
@@ -120,11 +120,11 @@ class ConsumerSettings(Settings):
             "redisPushInterval", self.REDIS_PUSH_INTERVAL
         )
 
-    def country_filter(self, entity: Entity | None) -> list[str]:
+    def filtered_countries(self, entity: Entity | None) -> list[str]:
         if not entity:
             return []
 
-        return self.RABBITMQ_ENTITIES.get(entity, {}).get("countryFilter", [])
+        return self.RABBITMQ_ENTITIES.get(entity, {}).get("filteredCountries", [])
 
 
 base_settings = Settings()

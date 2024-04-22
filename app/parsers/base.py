@@ -46,7 +46,7 @@ class BaseParser:
         try:
             json_dict: dict = orjson.loads(msg)
         except orjson.JSONDecodeError:
-            logger.warning("Failed to parse msg, msg is not a valid JSON %s", msg)
+            logger.error("Failed to parse msg, msg is not a valid JSON %s", msg)
             return InvalidMessageSchema(entity=self.entity, msg=msg)  # type: ignore
 
         return MessageSchema(

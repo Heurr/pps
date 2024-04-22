@@ -16,3 +16,7 @@ class WorkerError(PriceServiceError):
 
 class WorkerFailedParseMsgError(WorkerError):
     pass
+
+
+class RedisFullError(PriceServiceError):
+    pass

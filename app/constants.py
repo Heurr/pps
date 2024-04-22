@@ -84,6 +84,8 @@ COUNTRY_PLATFORM_MAP = {
     for country in countries
 }
 
+RABBITMQ_MSG_CONTENT_TYPE_JSON = "application/json"
+
 
 PRICE_PRECISION = 12
 PRICE_SCALE = 2
