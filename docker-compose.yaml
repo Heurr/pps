@@ -9,23 +9,23 @@ services:
       target: development
       network: host
     environment:
-      PS_APP_ENV: dev
-      PS_LOG_LEVEL: info
-      PS_LOG_FORMAT: default
-      PS_POSTGRES_DB_HOST: db
-      PS_POSTGRES_DB_PASSWORD: alpharius
-      PS_API_URL: "http://price-services-api"
-      PS_APP_SECRET: pz8BL6OTBbtiPyONEXk00rFPX9WTXIeRJ8oI3CKv79U
+      PPS_APP_ENV: dev
+      PPS_LOG_LEVEL: info
+      PPS_LOG_FORMAT: default
+      PPS_POSTGRES_DB_HOST: db
+      PPS_POSTGRES_DB_PASSWORD: alpharius
+      PPS_API_URL: "http://price-services-api"
+      PPS_APP_SECRET: pz8BL6OTBbtiPyONEXk00rFPX9WTXIeRJ8oI3CKv79U
 
       # env values only needed for testing RabbitMQ workers
-      PS_RABBITMQ_HOST: rabbitmq
-      PS_RABBITMQ_USER: user
-      PS_RABBITMQ_PASSWORD: passw0rd
-      PS_RABBITMQ_VIRTUAL_HOST: op-vh-dev
-      PS_RABBITMQ_EXCHANGE_NAME: op-ex
-      PS_RABBITMQ_QUEUE_MAPPING: '{}'
+      PPS_RABBITMQ_HOST: rabbitmq
+      PPS_RABBITMQ_USER: user
+      PPS_RABBITMQ_PASSWORD: passw0rd
+      PPS_RABBITMQ_VIRTUAL_HOST: op-vh-dev
+      PPS_RABBITMQ_EXCHANGE_NAME: op-ex
+      PPS_RABBITMQ_QUEUE_MAPPING: '{}'
       # env values only needed for testing Message Workers
-      PS_REDIS_HOST: redis
+      PPS_REDIS_HOST: redis
 
     volumes:
       - ./alembic:/usr/src/app/alembic
@@ -53,9 +53,9 @@ services:
     restart: always
     environment:
       POSTGRES_PASSWORD: password
-      PS_DB_USER: api-user
-      PS_DB_PASSWORD: alpharius
-      PS_DB_NAMES: price-services
+      PPS_DB_USER: api-user
+      PPS_DB_PASSWORD: alpharius
+      PPS_DB_NAMES: price-services
     ports:
       - "5434:5432"
     volumes:

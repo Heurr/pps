@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.deployment.name }}-migrate-db
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "product-price.labels" . | nindent 4 }} migration
+  annotations:
+    helm.sh/hook: post-install,pre-upgrade
+    helm.sh/hook-weight: "1"
+spec:
+  template:
+    metadata:
+      name: {{ .Values.deployment.name }}-migrate-db
+    spec:
+      restartPolicy: Never
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-migrate-db
+          imagePullPolicy: Always
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          envFrom:
+            - secretRef:
+                name: {{ .Values.deployment.name }}-api
+            - configMapRef:
+                name: {{ .Values.deployment.name }}-api
+          command: [ '/bin/sh' ]
+          args: [ '-c', "python app/manage.py upgrade-db" ]

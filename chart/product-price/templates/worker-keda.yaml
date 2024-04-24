@@ -1,0 +1,35 @@
+{{- range $name, $configValues := .Values.workers -}}
+{{- with $ }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "product-price.fullname" . }}-worker-{{ $name }}-keda
+  namespace: {{ .Release.Namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "product-price.fullname" . }}-worker-{{ $name }}
+  pollingInterval: {{ $configValues.autoscalingPollingInterval | default .Values.autoscaling.workers.pollingInterval }}
+  minReplicaCount: {{ $configValues.autoscalingMinReplicaCount | default .Values.autoscaling.workers.minReplicaCount }}
+  maxReplicaCount: {{ $configValues.autoscalingMaxReplicaCount | default .Values.autoscaling.workers.maxReplicaCount }}
+  fallback:
+    {{- toYaml ($configValues.autoscalingFallback | default .Values.autoscaling.workers.fallback) | nindent 4 }}
+  advanced:
+    {{- toYaml ($configValues.autoscalingAdvanced | default .Values.autoscaling.workers.advanced) | nindent 4 }}
+  triggers:
+    - type: redis
+      metadata:
+        port: {{ .Values.redis.port | quote }}
+        hostFromEnv: OOR_REDIS_HOST
+        passwordFromEnv: OOR_REDIS_PASSWORD
+        usernameFromEnv: OOR_REDIS_USER
+        listName: rmq-{{ $name }}
+        listLength: {{ toString ($configValues.autoscalingListLength | default .Values.autoscaling.workers.listLength) | quote }}
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: {{ .Values.autoscaling.workers.targetCPUUtilizationPercentage | quote }}
+{{- end }}
+{{- end }}

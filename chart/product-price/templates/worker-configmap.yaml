@@ -1,0 +1,23 @@
+{{- range $name, $configValues := .Values.workers -}}
+{{- with $ }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "product-price.fullname" . }}-worker-{{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "product-price.labels" . | nindent 4 }} worker-{{ $name }}
+data:
+  PPS_APP_ENV: {{ .Values.app.env | quote }}
+  PPS_LOG_LEVEL: {{ .Values.app.logLevel | quote }}
+  PPS_LOG_FORMAT: {{ .Values.app.logFormat | quote }}
+  PPS_POSTGRES_DB_HOST: {{ .Values.postgres.masterHost | quote }}
+  PPS_POSTGRES_DB_NAME: {{ .Values.postgres.dbName | quote }}
+  PPS_POSTGRES_DB_USER: {{ .Values.postgres.user | quote }}
+  PPS_REDIS_HOST: {{ .Values.redis.host | quote }}
+  PPS_WORKER_BUFFER_SIZE: {{ $configValues.bufferSize | quote }}
+  PPS_WORKER_POP_TIMEOUT: {{ $configValues.popTimeout | quote }}
+  PPS_WORKER_MESSAGE_LOG_INTERVAL: {{ $configValues.messageLogInterval | default "1000" | quote }}
+{{- end -}}
+{{- end -}}

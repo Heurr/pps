@@ -1,0 +1,170 @@
+# Default values for product-price.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+deployment:
+  name: "product-price"
+
+image:
+  # Will be added from helm command
+  repository: ""
+  pullPolicy: Always
+  # Will be added from helm command
+  tag: ""
+
+app:
+  env: ""
+  logLevel: info
+  logFormat: default
+
+postgres:
+  masterHost: null
+  dbName: product-price
+  user: product-price
+
+redis:
+  host: null
+  port: 6379
+  user: ""
+
+rabbitmq:
+  host: null
+  port: 5672
+  user: op-pps-postman
+  virtualhost: "op-vh"
+  exchange: "op-ex"
+  prefetchCount: 200
+  queuePostfix: ""
+
+consumers:
+  createQueues: false
+  redisPushInterval: 0.1
+  redisCapacityThreshold: 95
+  queues: { }
+  entities:
+    shop:
+      filteredCountries: []
+    offer:
+      filteredCountries: ["BA", "HR", "HU", "RO", "RS", "SI"]
+    buyable:
+      filteredCountries: ["BA", "HR", "HU", "RO", "RS", "SI"]
+    availability:
+      filteredCountries: ["BA", "HR", "HU", "RO", "RS", "SI"]
+
+
+workers:
+  shop:
+    appArgs: "python app/manage.py run-worker shop"
+    bufferSize: 10
+    popTimeout: 0.2
+    forceEntityUpdate: False
+  buyable:
+    appArgs: "python app/manage.py run-worker buyable"
+    bufferSize: 500
+    popTimeout: 0.2
+    forceEntityUpdate: False
+  availability:
+    appArgs: "python app/manage.py run-worker availability"
+    bufferSize: 500
+    popTimeout: 0.2
+    forceEntityUpdate: False
+  offer:
+    appArgs: "python app/manage.py run-worker offer"
+    bufferSize: 400
+    popTimeout: 0.2
+    forceEntityUpdate: False
+
+
+metrics:
+  port: 9090
+
+
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  path: "/"
+  host: ""
+
+resources:
+  api:
+    limits:
+      memory: 800Mi
+    requests:
+      cpu: 400m
+      memory: 400Mi
+  workers:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 150m
+      memory: 256Mi
+
+livenessProbe:
+  api:
+    periodSeconds: 3
+    timeoutSeconds: 5
+    initialDelaySeconds: 10
+    successThreshold: 1
+    failureThreshold: 3
+    httpGet:
+      path: /-/liveness
+      port: http
+
+readinessProbe:
+  api:
+    periodSeconds: 3
+    timeoutSeconds: 5
+    initialDelaySeconds: 10
+    successThreshold: 1
+    failureThreshold: 3
+    httpGet:
+      path: /-/readiness
+      port: http
+
+autoscaling:
+  api:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 80
+  workers:
+    listLength: "7500" # Scale one pod every X list items on average
+    pollingInterval: 30
+    minReplicaCount: 0
+    maxReplicaCount: 5
+    targetCPUUtilizationPercentage: 80
+    fallback:
+      failureThreshold: 10 # If gathering of metrics fails 9 times in a row, scale to 5 pods
+      replicas: 5
+    advanced:
+      # See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#configurable-scaling-behavior
+      # at most 10% of current replicas can be scaled down in one minute
+      horizontalPodAutoscalerConfig:
+        behavior:
+          scaleDown:
+            policies:
+              - type: Percent
+                value: 10
+                periodSeconds: 30
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

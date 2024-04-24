@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.name }}-redis-exporter
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "product-price.labels" . | nindent 4 }} redis-exporter
+spec:
+  selector:
+    matchLabels:
+      {{- include "product-price.selectorLabels" . | nindent 6 }} redis-exporter
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        {{- include "product-price.selectorLabels" . | nindent 8 }} redis-exporter
+    spec:
+      containers:
+      - name: redis-exporter
+        image: bitnami/redis-exporter:1.58.0
+        env:
+          - name: REDIS_ADDR
+            value: "redis://{{ .Values.redis.host }}:{{ .Values.redis.port }}"
+          - name: REDIS_USER
+            value: {{ .Values.redis.user | quote }}
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.deployment.name }}-worker
+                key: PPS_REDIS_PASSWORD
+          - name: REDIS_EXPORTER_CHECK_KEYS
+            value: "*"
+          - name: REDIS_EXPORTER_SET_CLIENT_NAME
+            value: "false"
+        ports:
+        - name: metrics
+          containerPort: 9121
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: 9121
+          initialDelaySeconds: 5
+          periodSeconds: 15

@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     def is_dev(self) -> bool:
         return self.APP_ENV.lower() == "dev"
 
-    model_config = SettingsConfigDict(env_prefix="PS_")
+    model_config = SettingsConfigDict(env_prefix="PPS_")
 
 
 class ApiSettings(Settings):
@@ -67,7 +67,7 @@ class LogSettings(BaseSettings):
     LOG_LEVEL: str = "info"
     LOG_FORMAT: LogFormatType = LogFormatType.DEFAULT
 
-    model_config = SettingsConfigDict(env_prefix="PS_")
+    model_config = SettingsConfigDict(env_prefix="PPS_")
 
 
 class ConsumerSettings(Settings):

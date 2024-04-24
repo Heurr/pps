@@ -1,0 +1,15 @@
+app:
+  env: dev
+
+ingress:
+  host: api.product-price.dev.heu.group
+
+postgres:
+  masterHost: 10.84.1.36
+
+redis:
+  host: 10.84.0.203
+
+rabbitmq:
+  host: 10.144.1.32  # pre-prod RabbitMQ
+  queuePostfix: "dev"

@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "product-price.fullname" . }}-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "product-price.labels" . | nindent 4 }} api
+  annotations:
+    cert-manager.io/cluster-issuer: "zerossl"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+      - {{ $.Values.ingress.host }}
+    secretName: {{ $.Values.ingress.host }}
+  rules:
+  - host: {{ $.Values.ingress.host }}
+    http:
+      paths:
+        - pathType: Prefix
+          path: {{ $.Values.ingress.path }}
+          backend:
+            service:
+              name: {{ include "product-price.fullname" . }}-api
+              port:
+                number: 80

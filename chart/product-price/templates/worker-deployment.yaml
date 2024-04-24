@@ -1,0 +1,47 @@
+{{- range $name, $configValues := .Values.workers -}}
+{{- with $ }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "product-price.fullname" . }}-worker-{{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "product-price.labels" . | nindent 4 }} worker-{{ $name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "product-price.selectorLabels" . | nindent 6 }} worker-{{ $name }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "product-price.selectorLabels" . | nindent 8 }} worker-{{ $name }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-worker-{{ $name }}
+          command: ["/bin/sh"]
+          args: ["-c", {{ $configValues.appArgs}}]
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: {{ include "product-price.fullname" . }}-worker
+            - configMapRef:
+                name: {{ include "product-price.fullname" . }}-worker-{{ $name }}
+          resources:
+            {{- toYaml .Values.resources.workers | nindent 12 }}
+{{- end -}}
+{{- end -}}
