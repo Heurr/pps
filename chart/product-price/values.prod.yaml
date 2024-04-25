@@ -13,6 +13,11 @@ redis:
 rabbitmq:
   host: 10.112.1.32 # prod-rmq-cl-2.rabbitmq.prod.heu.group
 
+consumers:
+  queues:
+    availability:
+      rmqHost: 10.112.1.33 # prod-rmq-cl-5.rabbitmq.prod.heu.group
+
 autoscaling:
   api:
     enabled: true

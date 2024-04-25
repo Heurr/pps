@@ -26,7 +26,7 @@ class RMQClient:
         self.entity = entity
         self.rmq_url = settings.rabbitmq_dsn(entity)
         self.exchange_name = settings.rabbitmq_exchange_name(entity)
-        self.queue_name = f"op-ops-consumer-{entity.value}"
+        self.queue_name = f"op-pps-consumer-{entity.value}"
         if settings.RABBITMQ_QUEUE_POSTFIX:
             self.queue_name += f"-{settings.RABBITMQ_QUEUE_POSTFIX}"
         self.create_queues = settings.RABBITMQ_CREATE_QUEUES

@@ -31,12 +31,12 @@ function create_database() {
 EOSQL
 }
 
-if [[ -n "${PS_DB_USER}" && -n "${PS_DB_NAMES}" ]]; then
+if [[ -n "${PPS_DB_USER}" && -n "${PPS_DB_NAMES}" ]]; then
 	alter_template
-	create_user "${PS_DB_USER}" "${PS_DB_PASSWORD}"
+	create_user "${PPS_DB_USER}" "${PPS_DB_PASSWORD}"
 
-	for db in $(echo "${PS_DB_NAMES}" | tr ',' ' '); do
-		create_database "${db}" "${PS_DB_USER}"
+	for db in $(echo "${PPS_DB_NAMES}" | tr ',' ' '); do
+		create_database "${db}" "${PPS_DB_USER}"
 	done
 
 	echo "DB user and databases are created"

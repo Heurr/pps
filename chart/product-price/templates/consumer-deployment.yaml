@@ -1,0 +1,59 @@
+{{- range $entity := keys .Values.consumers.entities -}}
+{{- with $ }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.name }}-consumer-{{ $entity }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "product-price.labels" . | nindent 4 }} consumer-{{ $entity }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "product-price.selectorLabels" . | nindent 6 }} consumer-{{ $entity }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "product-price.selectorLabels" . | nindent 8 }} consumer-{{ $entity }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-consumer-{{ $entity }}
+          command: [ "/bin/sh" ]
+          args: [ "-c", "python -u app/manage.py run-consumer {{ $entity }}" ]
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: {{ .Values.deployment.name }}-consumer
+            - configMapRef:
+                name: {{ .Values.deployment.name }}-consumer
+          # This block of logic is required if a different rmqHost is specified in queues
+          {{- $rabbimqHost := .Values.rabbitmq.host }}
+          {{- if hasKey .Values.consumers.queues $entity }}
+            {{- range $queueName, $object := .Values.consumers.queues }}
+              {{- if eq $entity $queueName }}
+                {{- $rabbimqHost = $object.rmqHost }}
+              {{ end }}
+            {{ end }}
+          {{- end }}
+          env:
+            - name: PPS_RABBITMQ_DSN
+              value: "amqp://{{ .Values.rabbitmq.user }}:$(PPS_RABBITMQ_PASSWORD)@{{ $rabbimqHost }}:{{ .Values.rabbitmq.port }}/{{ .Values.rabbitmq.virtualhost }}"
+          resources:
+            {{- toYaml .Values.resources.consumers | nindent 12 }}
+{{- end -}}
+{{- end -}}

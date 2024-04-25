@@ -13,6 +13,9 @@ data:
   PPS_RABBITMQ_HOST: {{ .Values.rabbitmq.host | quote }}
   PPS_RABBITMQ_PORT: {{ .Values.rabbitmq.port | quote }}
   PPS_RABBITMQ_USER: {{ .Values.rabbitmq.user | quote }}
+  PPS_POSTGRES_DB_HOST: {{ .Values.postgres.masterHost | quote }}
+  PPS_POSTGRES_DB_NAME: {{ .Values.postgres.dbName | quote }}
+  PPS_POSTGRES_DB_USER: {{ .Values.postgres.user | quote }}
   PPS_RABBITMQ_VIRTUAL_HOST: {{ .Values.rabbitmq.virtualhost | quote }}
   PPS_RABBITMQ_EXCHANGE_NAME: {{ .Values.rabbitmq.exchange | quote }}
   PPS_RABBITMQ_PREFETCH_COUNT: {{ .Values.rabbitmq.prefetchCount | quote }}

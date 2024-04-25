@@ -42,13 +42,13 @@ consumers:
   queues: { }
   entities:
     shop:
-      filteredCountries: []
+      filteredCountries: [ ]
     offer:
-      filteredCountries: ["BA", "HR", "HU", "RO", "RS", "SI"]
+      filteredCountries: [ "BA", "HR", "HU", "RO", "RS", "SI" ]
     buyable:
-      filteredCountries: ["BA", "HR", "HU", "RO", "RS", "SI"]
+      filteredCountries: [ "BA", "HR", "HU", "RO", "RS", "SI" ]
     availability:
-      filteredCountries: ["BA", "HR", "HU", "RO", "RS", "SI"]
+      filteredCountries: [ "BA", "HR", "HU", "RO", "RS", "SI" ]
 
 
 workers:
@@ -81,10 +81,10 @@ metrics:
 nameOverride: ""
 fullnameOverride: ""
 
-podAnnotations: {}
-podLabels: {}
+podAnnotations: { }
+podLabels: { }
 
-podSecurityContext: {}
+podSecurityContext: { }
 
 securityContext:
   allowPrivilegeEscalation: false
@@ -114,6 +114,13 @@ resources:
     requests:
       cpu: 150m
       memory: 256Mi
+  consumers:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
 
 livenessProbe:
   api:
@@ -143,6 +150,23 @@ autoscaling:
     minReplicas: 1
     maxReplicas: 3
     targetCPUUtilizationPercentage: 80
+  consumer:
+    queueLength: "7500"  # Scale one pod every X items on average
+    pollingInterval: 30
+    minReplicaCount: 0
+    maxReplicaCount: 5
+    targetCPUUtilizationPercentage: 80
+    fallback:
+      failureThreshold: 10
+      replicas: 5
+    advanced:
+      horizontalPodAutoscalerConfig:
+        behavior:
+          scaleDown:
+            policies:
+              - type: Percent
+                value: 10
+                periodSeconds: 15
   workers:
     listLength: "7500" # Scale one pod every X list items on average
     pollingInterval: 30
@@ -163,8 +187,8 @@ autoscaling:
                 value: 10
                 periodSeconds: 30
 
-nodeSelector: {}
+nodeSelector: { }
 
-tolerations: []
+tolerations: [ ]
 
-affinity: {}
+affinity: { }

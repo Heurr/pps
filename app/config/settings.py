@@ -82,7 +82,7 @@ class ConsumerSettings(Settings):
     RABBITMQ_QUEUE_MAPPING: dict[Entity, dict] = {}
     RABBITMQ_ENTITIES: dict[Entity, Any] = {}
     RABBITMQ_QUEUE_POSTFIX: str | None = None
-    REDIS_PUSH_INTERVAL: int = 1
+    REDIS_PUSH_INTERVAL: float = 1
     REDIS_CAPACITY_THRESHOLD_IN_PERCENT: int = 95
     MESSAGE_ARCHIVE_RETENTION: int = 5  # days
 

@@ -32,7 +32,7 @@ def msg_body(
 
 
 def get_queue_name(settings: ConsumerSettings, entity: Entity) -> str:
-    return f"op-ops-consumer-{entity.value}-{settings.RABBITMQ_QUEUE_POSTFIX}"
+    return f"op-pps-consumer-{entity.value}-{settings.RABBITMQ_QUEUE_POSTFIX}"
 
 
 async def wait_for_empty_rmq_queue(
@@ -143,7 +143,7 @@ async def test_stop_all_after_exc(rmq_exchange, settings, caplog):
     await task
     assert "Stopping offer consumer" in caplog.messages
     assert (
-        "Consumer offer for queue op-ops-consumer-offer-test stopped" in caplog.messages
+        "Consumer offer for queue op-pps-consumer-offer-test stopped" in caplog.messages
     )
 
 

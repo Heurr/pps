@@ -1,0 +1,39 @@
+{{- range $entity := keys .Values.consumers.entities -}}
+{{- with $ }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Values.deployment.name }}-consumer-{{ $entity }}-keda
+  namespace: {{ .Release.Namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.deployment.name }}-consumer-{{ $entity }}
+  pollingInterval: {{ .Values.autoscaling.consumer.pollingInterval }}
+  minReplicaCount: {{ .Values.autoscaling.consumer.minReplicaCount }}
+  maxReplicaCount: {{ .Values.autoscaling.consumer.maxReplicaCount }}
+  fallback:
+    {{- toYaml .Values.autoscaling.consumer.fallback | nindent 4 }}
+  advanced:
+    {{- toYaml .Values.autoscaling.consumer.advanced | nindent 4 }}
+  triggers:
+    - type: rabbitmq
+      metadata:
+        hostFromEnv: PPS_RABBITMQ_DSN
+        mode: QueueLength
+        value: {{ toString .Values.autoscaling.consumer.queueLength | quote }}
+        {{- $queuePostfix := "" }}
+        {{- if .Values.rabbitmq.queuePostfix }}
+          {{- $queuePostfix = printf "-%s" .Values.rabbitmq.queuePostfix }}
+        {{- end }}
+        queueName: op-pps-consumer-{{ $entity }}{{ $queuePostfix }}
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: {{ .Values.autoscaling.consumer.targetCPUUtilizationPercentage | quote }}
+        metricType: Utilization
+
+{{- end }}
+{{- end }}
