@@ -11,6 +11,5 @@ redis:
   host: 10.148.1.219
 
 rabbitmq:
-  rabbitmq:
-    host: 10.144.1.32 # pre-prod-rmq-cl-2.rabbitmq.pre-prod.heu.group
-    queuePostfix: "pre-prod"
+  host: 10.144.1.32 # pre-prod-rmq-cl-2.rabbitmq.pre-prod.heu.group
+  queuePostfix: "pre-prod"
