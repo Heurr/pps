@@ -30,18 +30,6 @@ async def test_get_many_by_ids_calls_crud_get_in(base_message_service, mocker):
     mock_crud.assert_called_once_with(db_conn_mock, [custom_uuid(0), custom_uuid(1)])
 
 
-# Fix while working on service tests
-# @pytest.mark.anyio
-# async def test_upsert_calls_crud_upsert_many(base_message_service, mocker):
-#     mock_crud = mocker.patch.object(base_message_service.crud, "upsert_many")
-#     db_conn_mock = mocker.AsyncMock()
-#     await base_message_service.upsert_many(
-#         db_conn_mock,
-#         [EntityModel(id=custom_uuid(1), version=0, country_code=CountryCode.SI)],
-#     )
-#     mock_crud.assert_called_once()
-
-
 @pytest.mark.anyio
 async def test_remove_calls_crud_remove_with_version_checking(
     base_message_service, mocker
