@@ -3,12 +3,11 @@ import json
 import pytest
 from pytest import param
 
-from app.constants import Entity
+from app.constants import Action, Entity
 from app.exceptions import ParserError
 from app.parsers.offer import OfferMessageParser
-from tests.utils import get_rmq_msgs
+from tests.msg_templator.base import entity_msg
 
-messages = get_rmq_msgs("parsers")
 not_throwing_data = [
     param(["legacy", "countryCode"], "CZ", False, id="all_values"),
     param(["countryCode"], None, False, id="missing_key"),
@@ -17,7 +16,7 @@ not_throwing_data = [
 
 @pytest.fixture
 def parsed_msg():
-    return json.loads(messages[Entity.OFFER])
+    return json.loads(entity_msg(Entity.OFFER, Action.CREATE, to_bytes=True))
 
 
 def test_error_handler(caplog):

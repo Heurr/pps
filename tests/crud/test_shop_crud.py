@@ -7,9 +7,9 @@ from tests.utils import compare, random_int, random_one_id
 
 
 @pytest.mark.anyio
-async def test_update_shops(db_conn, shops: list[ShopCreateSchema]):
+async def test_update_shops(db_conn, shops_fixture):
     # Create shops
-    await crud.shop.create_many(db_conn, shops)
+    await crud.shop.create_many(db_conn, shops_fixture)
     create_objs = [
         await shop_factory(
             shop_id=shop.id,
@@ -20,9 +20,9 @@ async def test_update_shops(db_conn, shops: list[ShopCreateSchema]):
             paying=not shop.paying,
             enabled=not shop.enabled,
         )
-        for shop in shops[:3]
+        for shop in shops_fixture[:3]
     ]
-    create_objs[0].version = shops[0].version - 1
+    create_objs[0].version = shops_fixture[0].version - 1
     assert len(create_objs) == 3
     create_objs = [ShopCreateSchema(**shop.model_dump()) for shop in create_objs]
 

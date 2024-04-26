@@ -81,7 +81,7 @@ async def shops_create(db_conn) -> list[ShopDBSchema]:
 
 
 @pytest.fixture
-async def shops(db_conn) -> list[ShopCreateSchema]:
+async def shops_fixture() -> list[ShopCreateSchema]:
     return [await shop_factory() for _i in range(5)]
 
 

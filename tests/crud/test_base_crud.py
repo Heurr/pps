@@ -7,8 +7,8 @@ from tests.utils import compare
 
 
 @pytest.mark.anyio
-async def test_create_shop(db_conn, shops: list[ShopCreateSchema]):
-    shop_in = shops[0]
+async def test_create_shop(db_conn, shops_fixture):
+    shop_in = shops_fixture[0]
 
     res = (await crud.shop.create_many(db_conn, [shop_in]))[0]
     assert res
@@ -38,12 +38,12 @@ async def test_delete_shop_with_version_checking(db_conn):
 
 
 @pytest.mark.anyio
-async def test_create(db_conn, shops: list[ShopCreateSchema]):
-    res = await crud.shop.create_many(db_conn, shops)
+async def test_create(db_conn, shops_fixture):
+    res = await crud.shop.create_many(db_conn, shops_fixture)
 
     assert res
     inserted_shops = await crud.shop.get_many(db_conn)
-    shop_map = {s.id: s for s in shops}
+    shop_map = {s.id: s for s in shops_fixture}
     for res_shop in inserted_shops:
         compare(shop_map[res_shop.id], res_shop)
 

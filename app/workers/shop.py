@@ -19,7 +19,7 @@ class ShopMessageWorker(BaseMessageWorker[ShopMessageSchema]):
         if any(
             [
                 shop.state.enabled,
-                shop.state.parse_file,
+                shop.state.paying,
                 shop.state.verified,
                 shop.certificate.enabled,
             ]

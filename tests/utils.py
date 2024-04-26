@@ -3,7 +3,6 @@ import random
 import secrets
 import string
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Any, TypeVar
 from uuid import UUID, uuid4
 
@@ -128,16 +127,6 @@ def compare(
     compare_obj_params(first, second, keys)
 
 
-def get_rmq_msgs(subdir: str):
-    files = [str(f) for f in Path(Path(__file__).parent / subdir / "data").iterdir()]
-    files_data = {}
-    for file in files:
-        key = file.split("/").pop().replace(".json", "")
-        with open(file) as _f:
-            files_data[key] = _f.read()
-    return files_data
-
-
 async def push_redis_messages(
     redis_conn: Redis, redis_list: str, *messages: dict
 ) -> None:
@@ -151,11 +140,9 @@ async def push_messages_and_process_them_by_worker(
     *msg_bodies: dict,
     wait_multiplier: float = 1.1,
 ):
+    worker.redis_pop_timeout = 0.01
     consuming_task = asyncio.create_task(worker.consume_and_process_messages())
     redis_list = f"rmq-{worker.entity.value}"
-
-    # Wait for worker starting
-    await asyncio.sleep(0.1)
 
     await push_redis_messages(
         worker_redis,
@@ -164,6 +151,6 @@ async def push_messages_and_process_them_by_worker(
     )
 
     # Wait for at least one iteration of pop messages and then stop it.
-    await asyncio.sleep(0.2 * wait_multiplier)
+    await asyncio.sleep(0.01 * wait_multiplier)
     worker.stop_consuming()
     await asyncio.wait_for(consuming_task, timeout=1)
