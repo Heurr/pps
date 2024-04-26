@@ -19,6 +19,7 @@ pre-commit:
   stage: lint
   before_script:
     - apt update && apt install -y git
+    - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash  # Install helm
   script:
     - pre-commit run --all-files
 

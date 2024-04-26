@@ -17,6 +17,14 @@ repos:
 
   - repo: local
     hooks:
+      - id: helm-lint
+        name: helm-lint
+        entry: scripts/lint-helm.sh
+        language: system
+        require_serial: true
+
+  - repo: local
+    hooks:
       - id: mypy
         name: mypy
         entry: poetry run scripts/types.sh
