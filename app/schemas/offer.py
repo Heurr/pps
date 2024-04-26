@@ -45,4 +45,4 @@ class OfferCreateSchema(EntityModel):
 
 
 class OfferDBSchema(OfferCreateSchema, BaseDBSchema):
-    pass
+    certified_shop: bool | None = None

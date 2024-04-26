@@ -3,7 +3,7 @@ from sqlalchemy.exc import DBAPIError
 
 from app import crud
 from app.schemas.offer import OfferCreateSchema
-from tests.factories import offer_factory
+from tests.factories import offer_factory, shop_factory
 from tests.utils import compare, random_int, random_one_id
 
 
@@ -112,3 +112,30 @@ async def test_update_offers(db_conn, offers: list[OfferCreateSchema]):
     assert res
     for res_offer in create_obj[1:]:
         compare(res_offer, (await crud.offer.get_in(db_conn, [res_offer.id]))[0])
+
+
+@pytest.mark.anyio
+async def test_get_in(db_conn):
+    shops = [
+        await shop_factory(db_conn, certified=True),
+        await shop_factory(db_conn, certified=False),
+    ]
+    offers = [
+        await offer_factory(db_conn, shop_id=shops[0].id),
+        await offer_factory(db_conn, shop_id=shops[1].id),
+        await offer_factory(db_conn),
+    ]
+    offers_db = await crud.offer.get_in(db_conn, [o.id for o in offers])
+    offers_db_map = {o.id: o for o in offers_db}
+
+    assert len(offers_db_map) == 3
+    for i in range(3):
+        assert offers_db_map[offers[i].id].price == offers[i].price
+        assert offers_db_map[offers[i].id].in_stock is None
+        assert offers_db_map[offers[i].id].buyable is None
+        assert offers_db_map[offers[i].id].availability_version == -1
+        assert offers_db_map[offers[i].id].buyable_version == -1
+
+    assert offers_db_map[offers[0].id].certified_shop is True
+    assert offers_db_map[offers[1].id].certified_shop is False
+    assert offers_db_map[offers[2].id].certified_shop is None

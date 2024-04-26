@@ -59,6 +59,7 @@ async def offer_factory(
     availability_version: int = -1,
     buyable: bool | None = None,
     buyable_version: int = -1,
+    certified_shop: bool | None = None,
 ) -> OfferCreateSchema | OfferDBSchema:
     schema = OfferCreateSchema(
         id=offer_id or random_one_id(),
@@ -77,7 +78,10 @@ async def offer_factory(
         return (await crud.offer.create_many(db_conn, [schema]))[0]
     elif db_schema:
         return OfferDBSchema(
-            **schema.model_dump(), created_at=utc_now(), updated_at=utc_now()
+            **schema.model_dump(),
+            certified_shop=certified_shop,
+            created_at=utc_now(),
+            updated_at=utc_now(),
         )
     else:
         return schema
