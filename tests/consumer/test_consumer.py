@@ -32,7 +32,7 @@ def msg_body(
 
 
 def get_queue_name(settings: ConsumerSettings, entity: Entity) -> str:
-    return f"op-pps-consumer-{entity.value}-{settings.RABBITMQ_QUEUE_POSTFIX}"
+    return f"op-pps-consumer-{entity.value}-{settings.CONSUMER_RABBITMQ_QUEUE_POSTFIX}"
 
 
 async def wait_for_empty_rmq_queue(

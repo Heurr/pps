@@ -1,51 +1,32 @@
 import logging
-from enum import Enum
 
-from aio_pika import connect_robust
-from aio_pika.abc import (
-    AbstractQueueIterator,
-    AbstractRobustChannel,
-    AbstractRobustConnection,
-    AbstractRobustQueue,
-)
+from aio_pika.abc import AbstractQueueIterator, AbstractRobustQueue
 
 from app.config.settings import ConsumerSettings
 from app.constants import Entity
+from app.utils.rabbitmq_adapter import BaseRabbitmqAdapter
 
 logger = logging.getLogger(__name__)
 
 
-class Action(Enum):
-    UPSERT = "upsert"
-    DELETE = "delete"
-
-
-class RMQClient:
+class RabbitmqConsumerClient(BaseRabbitmqAdapter):
     def __init__(self, entity: Entity, settings: ConsumerSettings):
+        super().__init__(settings.rabbitmq_dsn(entity))
         self.settings = settings
         self.entity = entity
-        self.rmq_url = settings.rabbitmq_dsn(entity)
         self.exchange_name = settings.rabbitmq_exchange_name(entity)
         self.queue_name = f"op-pps-consumer-{entity.value}"
-        if settings.RABBITMQ_QUEUE_POSTFIX:
-            self.queue_name += f"-{settings.RABBITMQ_QUEUE_POSTFIX}"
-        self.create_queues = settings.RABBITMQ_CREATE_QUEUES
+        if settings.CONSUMER_RABBITMQ_QUEUE_POSTFIX:
+            self.queue_name += f"-{settings.CONSUMER_RABBITMQ_QUEUE_POSTFIX}"
+        self.create_queues = settings.CONSUMER_RABBITMQ_CREATE_QUEUES
         self.prefetch_count = settings.RABBITMQ_PREFETCH_COUNT
         self.push_interval = settings.redis_push_interval(entity)
-        self.connection: AbstractRobustConnection
-        self.channel: AbstractRobustChannel
         self.queue: AbstractRobustQueue
 
-    async def __aenter__(self):
-        self.connection = await connect_robust(self.rmq_url)
-        self.channel = await self.connection.channel()
+    async def connect(self):
+        await super().connect()
         await self.channel.set_qos(prefetch_count=self.prefetch_count)
-        logger.info("Connected to RabbitMQ %s", self.rmq_url)
         await self._init_queue()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.connection.close()
 
     async def _init_queue(self):
         if self.create_queues:

@@ -12,12 +12,12 @@ from redis.asyncio import Redis
 
 from app.config.settings import ConsumerSettings
 from app.constants import Entity
+from app.consumers.rabbitmq_client import RabbitmqConsumerClient
 from app.exceptions import RedisFullError
 from app.metrics import ENTITY_METRICS
 from app.parsers import parser_from_entity
 from app.schemas.message import InvalidMessageSchema
 from app.utils.redis_adapter import RedisAdapter
-from app.utils.rmq_client import RMQClient
 
 
 #
@@ -35,11 +35,11 @@ class DummyDecoder(ContentTypeDecoder):
 class Consumer(RabbitMQBatchConsumer):
     def __init__(self, entity: Entity, settings: ConsumerSettings):
         self.entity = entity
-        self.rmq = RMQClient(entity, settings)
+        self.rmq = RabbitmqConsumerClient(entity, settings)
         self.redis: Redis | None = None
         self.redis_dsn = settings.redis_dsn
         self.redis_list = f"rmq-{entity.value}"
-        self.redis_capacity = settings.REDIS_CAPACITY_THRESHOLD_IN_PERCENT
+        self.redis_capacity = settings.CONSUMER_REDIS_CAPACITY_THRESHOLD_IN_PERCENT
         self.parser = parser_from_entity(entity, throw_errors=False)
         self.filtered_countries = settings.filtered_countries(entity)
         self.register_signals()

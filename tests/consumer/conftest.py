@@ -22,16 +22,16 @@ REDIS_KEYS_MAP = {
 @pytest.fixture
 def settings() -> ConsumerSettings:
     settings = ConsumerSettings()
-    settings.RABBITMQ_CREATE_QUEUES = True
-    settings.RABBITMQ_QUEUE_POSTFIX = "test"
+    settings.CONSUMER_RABBITMQ_CREATE_QUEUES = True
+    settings.CONSUMER_RABBITMQ_QUEUE_POSTFIX = "test"
     settings.RABBITMQ_EXCHANGE_NAME = "test-ex"
-    settings.RABBITMQ_ENTITIES = {
+    settings.CONSUMER_RABBITMQ_ENTITIES = {
         Entity.SHOP: {},
         Entity.OFFER: {"filteredCountries": ["CZ"]},
         Entity.BUYABLE: {},
         Entity.AVAILABILITY: {},
     }
-    settings.RABBITMQ_QUEUE_MAPPING = {
+    settings.CONSUMER_RABBITMQ_QUEUE_MAPPING = {
         Entity.SHOP: {
             "redisPushInterval": 0.05,
             "routingKeys": [

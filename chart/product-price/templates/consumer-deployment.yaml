@@ -43,8 +43,8 @@ spec:
                 name: {{ .Values.deployment.name }}-consumer
           # This block of logic is required if a different rmqHost is specified in queues
           {{- $rabbimqHost := .Values.rabbitmq.host }}
-          {{- if hasKey .Values.consumers.queues $entity }}
-            {{- range $queueName, $object := .Values.consumers.queues }}
+          {{- if hasKey .Values.rabbitmq.entities $entity }}
+            {{- range $queueName, $object := .Values.rabbitmq.entities }}
               {{- if eq $entity $queueName }}
                 {{- $rabbimqHost = $object.rmqHost }}
               {{ end }}

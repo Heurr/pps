@@ -20,6 +20,7 @@ data:
   PPS_RABBITMQ_EXCHANGE_NAME: {{ .Values.rabbitmq.exchange | quote }}
   PPS_RABBITMQ_PREFETCH_COUNT: {{ .Values.rabbitmq.prefetchCount | quote }}
   PPS_RABBITMQ_CREATE_QUEUES: {{ .Values.consumers.createQueues | quote }}
+  RABBITMQ_ENTITY_SERVER_MAP: {{ .Values.rabbitmq.entities | toJson | squote }}
   PPS_RABBITMQ_QUEUE_MAPPING: {{ .Values.consumers.queues | toJson | squote }}
   PPS_RABBITMQ_ENTITIES: {{ .Values.consumers.entities | toJson | squote }}
   PPS_RABBITMQ_QUEUE_POSTFIX: {{ .Values.rabbitmq.queuePostfix | quote }}
