@@ -10,7 +10,7 @@ from app.config.settings import ConsumerSettings
 from app.constants import Entity
 from app.consumers.consumer import Consumer
 from app.exceptions import RedisFullError
-from tests.consumer.conftest import REDIS_KEYS_MAP, publish
+from tests.integration.consumer.conftest import REDIS_KEYS_MAP, publish
 from tests.utils import custom_uuid
 
 

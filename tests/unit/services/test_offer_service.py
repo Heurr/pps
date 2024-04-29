@@ -122,6 +122,7 @@ async def test_generate_price_event_upsert(
     ]
     await offer_service.upsert_many(db_conn_mock, redis_mock, new_offers_msgs)
     events = send_price_events_mock.call_args.args[1]
+    assert len(events) == 10
 
     # first message - only ALL_OFFERS, the IN_STOCK_CERTIFIED is not sent because the offer is
     # not in stock
@@ -200,6 +201,7 @@ async def test_generate_price_event_delete(
     ]
     await offer_service.remove_many(db_conn_mock, redis_mock, to_delete)
     events = send_price_events_mock.call_args.args[1]
+    assert len(events) == 9
 
     # first message - only ALL_OFFERS, the IN_STOCK_CERTIFIED is not sent because the offer is
     # not in stock
