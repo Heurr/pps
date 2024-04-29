@@ -31,6 +31,7 @@ def settings() -> ConsumerSettings:
         Entity.BUYABLE: {},
         Entity.AVAILABILITY: {},
     }
+    settings.RABBITMQ_PREFETCH_COUNT = 1
     settings.CONSUMER_RABBITMQ_QUEUE_MAPPING = {
         Entity.SHOP: {
             "redisPushInterval": 0.05,
@@ -126,7 +127,7 @@ async def consumer(settings: ConsumerSettings, entity: Entity):
     consumer = Consumer(entity, settings)
     consumer.redis_capacity = 90
     task = asyncio.create_task(consumer.run())
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.05)
     yield consumer
     consumer.stop_consuming()
     await task
