@@ -282,13 +282,20 @@ class BaseMessageWorker(Generic[MessageSchemaT]):
     async def process_many_delete_messages(
         self, db_conn: AsyncConnection, messages: list[Message]
     ) -> None:
-        ids_versions = [(msg.identifier, msg.version) for msg in messages]
-        self._logger.debug("ids versions: %s", ids_versions)
-        deleted_ids = await self.service.remove_many(db_conn, ids_versions)
-        self._logger.info(
-            "Successfully delete %i %ss.", len(deleted_ids), self.entity.value
-        )
-        self.metrics.deleted_entities.inc(len(deleted_ids))
+        try:
+            ids_versions = [(msg.identifier, msg.version) for msg in messages]
+            self._logger.debug("ids versions: %s", ids_versions)
+            deleted_ids = await self.service.remove_many(db_conn, ids_versions)
+            self._logger.info(
+                "Successfully delete %i %ss.", len(deleted_ids), self.entity.value
+            )
+            self.metrics.deleted_entities.inc(len(deleted_ids))
+        except Exception as exc:
+            self._logger.error(
+                "Error in process delete %s messages: %s",
+                self.entity.value,
+                str(exc),
+            )
 
     def stop_consuming(self) -> None:
         self.should_consume = False
