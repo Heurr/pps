@@ -2,4 +2,4 @@
 set -xe
 
 black app tests
-ruff . --fix
+ruff check . --fix

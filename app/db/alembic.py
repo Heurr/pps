@@ -5,3 +5,4 @@
 from .pg import sa_metadata  # noqa
 from .tables.shop import shop_table  # noqa
 from .tables.offer import offer_table  # noqa
+from .tables.product_price import product_price_table  # noqa

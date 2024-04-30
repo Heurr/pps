@@ -1,3 +1,5 @@
+import re
+
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
@@ -23,6 +25,30 @@ target_metadata = sa_metadata
 # ... etc.
 
 
+excluded_tables = [
+    r"offers_\d{2}",
+    r"product_prices_\d{8}",
+    r"product_prices_\d{8}_\d{2}",
+]
+excluded_indices = []
+
+
+# Function for excluding partitioned tables
+def include_object(obj, name, type_, reflected, compare_to):  # noqa: ARG001
+    if type_ == "table":
+        for table_pattern in excluded_tables:  # noqa: SIM110
+            if re.match(table_pattern, name):
+                return False
+        return True
+    elif type_ == "index":
+        for index_pattern in excluded_indices:  # noqa: SIM110
+            if re.match(index_pattern, name):
+                return False
+        return True
+    else:
+        return True
+
+
 def _get_database_url():
     from app.config.settings import base_settings
 
@@ -46,6 +72,7 @@ def run_migrations_offline(url) -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
         compare_type=True,
     )
 
@@ -71,6 +98,7 @@ def run_migrations_online(url) -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            include_object=include_object,
             compare_type=True,
         )
 
