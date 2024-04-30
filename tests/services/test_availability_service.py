@@ -39,6 +39,7 @@ async def test_upsert_many(availability_service, mocker):
     crud_upsert_mock = mocker.patch.object(crud.availability, "upsert_many")
     crud_upsert_mock.side_effect = lambda _db_conn, entities: [e.id for e in entities]
     db_conn_mock = mocker.AsyncMock()
+    redis_mock = mocker.AsyncMock()
 
     availabilities = [
         AvailabilityCreateSchema(
@@ -56,7 +57,9 @@ async def test_upsert_many(availability_service, mocker):
     # Third availability shouldn't be updated because of old version
     # Fourth availability shouldn't be updated because of no value change
     # Fifth availability shouldn't be updated because of nonexistent offer
-    updated_ids = await availability_service.upsert_many(db_conn_mock, availabilities)
+    updated_ids = await availability_service.upsert_many(
+        db_conn_mock, redis_mock, availabilities
+    )
     assert set(updated_ids) == {availabilities[0].id, availabilities[1].id}
     crud_upsert_mock.assert_called_once_with(
         db_conn_mock, [availabilities[0], availabilities[1]]

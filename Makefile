@@ -41,6 +41,7 @@ db: # Connect to db with pgcli
 	pgcli postgresql://api-user:alpharius@localhost:5434/price-services
 
 lint: # Run the every linting script and a format script
+	poetry install --no-root
 	pre-commit run --all-files
 
 migration: # Create alembic migration script from the current state, set MSG for migration comment message

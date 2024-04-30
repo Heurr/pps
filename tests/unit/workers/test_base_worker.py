@@ -39,6 +39,7 @@ async def test_process_many_delete_messages(
     await buyable_message_mock_worker.process_many_delete_messages(db_conn_mock, messages)
     mock_crud.assert_called_once_with(
         db_conn_mock,
+        buyable_message_mock_worker.redis,
         [
             (messages[0].identifier, messages[0].version),
             (messages[1].identifier, messages[1].version),
@@ -98,6 +99,7 @@ async def test_process_many_create_update_messages(
     )
     mock_crud.assert_called_once_with(
         db_conn_mock,
+        buyable_message_mock_worker.redis,
         [
             BuyableCreateSchema(
                 id=messages[0].body["offerId"],

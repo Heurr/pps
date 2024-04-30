@@ -62,7 +62,7 @@ warn_untyped_fields = true
 [tool.ruff]
 select = ["E", "W", "F", "B", "N", "PL", "I", "ASYNC", "C4", "G", "PIE", "T20", "PYI", "Q", "SIM", "ARG", "PERF"]
 fixable = ["ALL"]
-line-length = 90
+line-length = 100
 fix = true
 
 

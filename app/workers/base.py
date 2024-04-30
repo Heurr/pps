@@ -264,7 +264,7 @@ class BaseMessageWorker(Generic[MessageSchemaT]):
             data_in = self.to_create_schemas(msgs_in)
 
             self._logger.debug("Messages: %s", data_in)
-            upserted_ids = await self.service.upsert_many(db_conn, data_in)
+            upserted_ids = await self.service.upsert_many(db_conn, self.redis, data_in)
             self._logger.info(
                 "Successfully upserted %i %ss.",
                 len(upserted_ids),
@@ -285,7 +285,9 @@ class BaseMessageWorker(Generic[MessageSchemaT]):
         try:
             ids_versions = [(msg.identifier, msg.version) for msg in messages]
             self._logger.debug("ids versions: %s", ids_versions)
-            deleted_ids = await self.service.remove_many(db_conn, ids_versions)
+            deleted_ids = await self.service.remove_many(
+                db_conn, self.redis, ids_versions
+            )
             self._logger.info(
                 "Successfully delete %i %ss.", len(deleted_ids), self.entity.value
             )

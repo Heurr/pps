@@ -39,6 +39,7 @@ async def test_upsert_many(buyable_service, mocker):
     crud_upsert_mock = mocker.patch.object(crud.buyable, "upsert_many")
     crud_upsert_mock.side_effect = lambda _db_conn, entities: [e.id for e in entities]
     db_conn_mock = mocker.AsyncMock()
+    redis_mock = mocker.AsyncMock()
 
     buyables = [
         BuyableCreateSchema(
@@ -55,6 +56,6 @@ async def test_upsert_many(buyable_service, mocker):
     # Third buyable shouldn't be updated because of old version
     # Fourth buyable shouldn't be updated because of no value change
     # Fifth buyable shouldn't be updated because of nonexistent offer
-    updated_ids = await buyable_service.upsert_many(db_conn_mock, buyables)
+    updated_ids = await buyable_service.upsert_many(db_conn_mock, redis_mock, buyables)
     assert set(updated_ids) == {buyables[0].id, buyables[1].id}
     crud_upsert_mock.assert_called_once_with(db_conn_mock, [buyables[0], buyables[1]])

@@ -41,5 +41,6 @@ async def test_upsert_many(shop_service, mocker):
     crud_upsert_mock = mocker.patch.object(crud.shop, "upsert_many")
     crud_upsert_mock.side_effect = lambda _db_conn, entities: [e.id for e in entities]
     db_conn_mock = mocker.AsyncMock()
-    updated_ids = await shop_service.upsert_many(db_conn_mock, new_shop_msgs)
+    redis_mock = mocker.AsyncMock()
+    updated_ids = await shop_service.upsert_many(db_conn_mock, redis_mock, new_shop_msgs)
     assert set(updated_ids) == {custom_uuid(5)}
