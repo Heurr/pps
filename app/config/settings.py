@@ -99,17 +99,10 @@ class RabbitmqSettings(Settings):
 
 
 class RepublishSettings(RabbitmqSettings):
-    # TODO: Move these to helm chart when job is done
-    REPUBLISH_TO_ROUTING_KEY_MAP: dict[Entity, str] = {
-        Entity.AVAILABILITY: "availability.v1.republish",
-        Entity.BUYABLE: "om-buyable.v1.republish",
-    }
-    REPLY_TO_ROUTING_KEY: str = "op-product-price-service.republish-info"
-    TARGET_ROUTING_KEY_MAP: dict[Entity, str] = {
-        Entity.AVAILABILITY: "availability.v2.create.pps",
-        Entity.BUYABLE: "om-buyable.v1.update.pps",
-    }
-    USER_AGENT: str = "Product Price Service Republisher"
+    TARGET_ROUTING_KEY_MAP: dict[Entity, str]
+    REPLY_TO_ROUTING_KEY: str
+    REPUBLISH_TO_ROUTING_KEY_MAP: dict[Entity, str]
+    USER_AGENT: str
     CONTENT_TYPE: str = "application/json"
     REPUBLISH_BATCH: int = 1000
 
@@ -121,6 +114,7 @@ class ConsumerSettings(RabbitmqSettings):
     CONSUMER_RABBITMQ_QUEUE_POSTFIX: str | None = None
     CONSUMER_REDIS_PUSH_INTERVAL: float = 1
     CONSUMER_REDIS_CAPACITY_THRESHOLD_IN_PERCENT: int = 95
+    CONSUMER_ITERATOR_TIMEOUT: float = 1
 
     def rabbitmq_entity_queue_mapping(self, entity) -> dict:
         return self.CONSUMER_RABBITMQ_QUEUE_MAPPING.get(entity, {})
@@ -146,6 +140,11 @@ class ConsumerSettings(RabbitmqSettings):
         return self.CONSUMER_RABBITMQ_ENTITIES.get(entity, {}).get(
             "filteredCountries", []
         )
+
+
+class EntityPopulationJobSettings(Settings):
+    BATCH_SIZE: int = 1000
+    EXPIRE_TIME: int = 6 * 60 * 60  # 6 hours in seconds
 
 
 base_settings = Settings()

@@ -121,6 +121,13 @@ resources:
     requests:
       cpu: 250m
       memory: 256Mi
+  populateEntities:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
 
 
 livenessProbe:
@@ -187,6 +194,18 @@ autoscaling:
               - type: Percent
                 value: 10
                 periodSeconds: 30
+
+
+entityPopulation:
+  targetRoutingKeyMap:
+    buyable: "om-buyable.v1.republish"
+    availability: "availability.v1.republish"
+  replyToRoutingKey: "op-product-price.republish-info"
+  republishToRoutingKeyMap:
+    buyable: "om-buyable.v1.update.pps"
+    availability: "availability.v2.create.pps"
+  userAgent: "Product Price Service Republisher"
+  republishBatch: 1000
 
 nodeSelector: { }
 

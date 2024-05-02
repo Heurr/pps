@@ -19,10 +19,10 @@ data:
   PPS_RABBITMQ_VIRTUAL_HOST: {{ .Values.rabbitmq.virtualhost | quote }}
   PPS_RABBITMQ_EXCHANGE_NAME: {{ .Values.rabbitmq.exchange | quote }}
   PPS_RABBITMQ_PREFETCH_COUNT: {{ .Values.rabbitmq.prefetchCount | quote }}
-  PPS_RABBITMQ_CREATE_QUEUES: {{ .Values.consumers.createQueues | quote }}
-  RABBITMQ_ENTITY_SERVER_MAP: {{ .Values.rabbitmq.entities | toJson | squote }}
-  PPS_RABBITMQ_QUEUE_MAPPING: {{ .Values.consumers.queues | toJson | squote }}
-  PPS_RABBITMQ_ENTITIES: {{ .Values.consumers.entities | toJson | squote }}
-  PPS_RABBITMQ_QUEUE_POSTFIX: {{ .Values.rabbitmq.queuePostfix | quote }}
-  PPS_REDIS_PUSH_INTERVAL: {{ .Values.consumers.redisPushInterval | quote }}
-  PPS_REDIS_CAPACITY_THRESHOLD_IN_PERCENT: {{ .Values.consumers.redisCapacityThreshold | quote }}
+  PPS_RABBITMQ_ENTITY_SERVER_MAP: {{ .Values.rabbitmq.entities | toJson | squote }}
+  PPS_CONSUMER_RABBITMQ_CREATE_QUEUES: {{ .Values.consumers.createQueues | quote }}
+  PPS_CONSUMER_RABBITMQ_QUEUE_MAPPING: {{ .Values.consumers.queues | toJson | squote }}
+  PPS_CONSUMER_RABBITMQ_ENTITIES: {{ .Values.consumers.entities | toJson | squote }}
+  PPS_CONSUMER_RABBITMQ_QUEUE_POSTFIX: {{ .Values.rabbitmq.queuePostfix | quote }}
+  PPS_CONSUMER_REDIS_PUSH_INTERVAL: {{ .Values.consumers.redisPushInterval | quote }}
+  PPS_CONSUMER_REDIS_CAPACITY_THRESHOLD_IN_PERCENT: {{ .Values.consumers.redisCapacityThreshold | quote }}

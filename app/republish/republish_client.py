@@ -1,7 +1,6 @@
 import logging
 from uuid import UUID
 
-import orjson
 from aio_pika import Message
 from aio_pika.abc import AbstractExchange, HeadersType
 
@@ -9,6 +8,7 @@ from app.config.settings import RepublishSettings
 from app.constants import Entity
 from app.exceptions import PriceServiceError
 from app.republish.headers import RepublishHeaders
+from app.utils import dump_to_json
 from app.utils.rabbitmq_adapter import BaseRabbitmqAdapter
 
 logger = logging.getLogger(__name__)
@@ -48,9 +48,15 @@ class RabbitmqRepublishClient(BaseRabbitmqAdapter):
             for i in range(0, len(ids), self.republish_batch):
                 batch = ids[i : i + self.republish_batch]
                 message = Message(
-                    body=orjson.dumps({"ids": batch}), headers=self._headers
+                    body=dump_to_json({"ids": batch}).encode("utf-8"),
+                    headers=self._headers,
                 )
                 await self.exchange.publish(message, self.target_routing_key)
+                logger.info(
+                    "Pushed %i ids for republish to %s",
+                    len(batch),
+                    self.target_routing_key,
+                )
         except Exception as exc:
             logger.error("Error while republishing ids, %s", exc, exc_info=exc)
 

@@ -3,7 +3,7 @@ name: price-services
 
 services:
   api:
-#    network_mode: host
+    #    network_mode: host
     build:
       context: .
       target: development
@@ -27,6 +27,10 @@ services:
       # env values only needed for testing Message Workers
       PPS_REDIS_HOST: redis
 
+      PPS_TARGET_ROUTING_KEY_MAP: '{"availability":"availability.v1.republish","buyable":"om-buyable.v1.republish"}'
+      PPS_REPLY_TO_ROUTING_KEY: "op-product-price.republish-info"
+      PPS_REPUBLISH_TO_ROUTING_KEY_MAP: '{"availability":"availability.v2.create.pps","buyable":"om-buyable.v1.update.pps"}'
+      PPS_USER_AGENT: "Product Price Service Republisher"
     volumes:
       - ./alembic:/usr/src/app/alembic
       - ./app:/usr/src/app/app
@@ -81,4 +85,4 @@ services:
         echo "maxmemory 1073741824" > /usr/local/etc/redis/redis.conf
         redis-server /usr/local/etc/redis/redis.conf
     ports:
-     - "6379:6379"
+      - "6379:6379"

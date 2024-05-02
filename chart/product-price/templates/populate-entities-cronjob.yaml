@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Values.deployment.name }}-populate-entities
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "product-price.labels" . | nindent 4 }} populate-entities
+spec:
+  schedule: "00 */4 * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 30
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          name: {{ .Values.deployment.name }}-populate-entities
+          labels:
+            {{- include "product-price.labels" . | nindent 12 }} populate-entities
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+          - name: {{ .Chart.Name }}-populate-entities
+            securityContext:
+              {{- toYaml .Values.securityContext | nindent 14 }}
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+            command: [ "/bin/sh" ]
+            args: [ "-c", "python app/manage.py entity-population-job availability buyable" ]
+            envFrom:
+              - secretRef:
+                  name: {{ .Values.deployment.name }}-populate-entities
+              - configMapRef:
+                  name: {{ .Values.deployment.name }}-populate-entities
+            resources:
+              {{- toYaml .Values.resources.populateEntities | nindent 14 }}
+            ports:
+              - name: metrics
+                containerPort: {{ .Values.metrics.port }}
+                protocol: TCP

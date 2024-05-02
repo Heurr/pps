@@ -10,7 +10,7 @@ from tests.utils import custom_uuid
 
 
 @pytest.fixture
-async def mock_rmq_publisher_client(mocker):
+async def mock_rmq_publisher_client_channel(mocker):
     connection_mock = mocker.patch("app.utils.rabbitmq_adapter.connect_robust")
     mock_channel = AsyncMock()
     connection_mock.return_value.channel = mock_channel
@@ -18,8 +18,13 @@ async def mock_rmq_publisher_client(mocker):
     mock_exchange = AsyncMock()
     mock_channel.get_exchange.return_value = mock_exchange
 
+    yield mock_channel
+
+
+@pytest.fixture
+async def mock_rmq_publisher_client(mock_rmq_publisher_client_channel):
     async with RabbitmqRepublishClient(Entity.BUYABLE) as rmq:
-        mock_channel.assert_awaited_once()
+        mock_rmq_publisher_client_channel.assert_awaited_once()
         yield rmq
 
 
@@ -35,11 +40,11 @@ async def test_republish_ids(mocker, mock_rmq_publisher_client: RabbitmqRepublis
     assert headers.model_dump(exclude={"hg_message_id"}) == {
         "user_agent": "Product Price Service Republisher",
         "content_type": "application/json",
-        "hg_republish_to": "om-buyable.v1.republish",
-        "hg_reply_to": "op-product-price-service.republish-info",
+        "hg_republish_to": "om-buyable.v1.update.pps",
+        "hg_reply_to": "op-product-price.republish-info",
     }
     assert "hg_message_id" in rmq_mock.call_args.args[0].headers
-    assert rmq_mock.call_args.args[1] == "om-buyable.v1.update.pps"
+    assert rmq_mock.call_args.args[1] == "om-buyable.v1.republish"
 
 
 @pytest.mark.anyio

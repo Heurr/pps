@@ -20,7 +20,6 @@ from app.schemas.message import InvalidMessageSchema
 from app.utils.redis_adapter import RedisAdapter
 
 
-#
 class DummyDecoder(ContentTypeDecoder):
     def decode(self, original_message: AbstractIncomingMessage) -> Message:
         return Message(
@@ -42,6 +41,7 @@ class Consumer(RabbitMQBatchConsumer):
         self.redis_capacity = settings.CONSUMER_REDIS_CAPACITY_THRESHOLD_IN_PERCENT
         self.parser = parser_from_entity(entity, throw_errors=False)
         self.filtered_countries = settings.filtered_countries(entity)
+        self.iterator_timeout = settings.CONSUMER_ITERATOR_TIMEOUT
         self.register_signals()
         self.logger = getLogger(self.__class__.__name__)
 
@@ -53,7 +53,7 @@ class Consumer(RabbitMQBatchConsumer):
                     decoder=DummyDecoder(),
                     max_delay=self.rmq.push_interval,
                     max_item_count=self.rmq.prefetch_count,
-                    iterator_timeout=1,
+                    iterator_timeout=self.iterator_timeout,
                     iterator_timeout_sleep=0.05,
                 )
                 self.redis = redis

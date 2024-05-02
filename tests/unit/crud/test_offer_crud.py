@@ -1,10 +1,13 @@
+from unittest.mock import AsyncMock
+
 import pytest
 from sqlalchemy.exc import DBAPIError
 
 from app import crud
+from app.constants import Entity
 from app.schemas.offer import OfferCreateSchema
 from tests.factories import offer_factory, shop_factory
-from tests.utils import compare, random_int, random_one_id
+from tests.utils import compare, custom_uuid, random_int, random_one_id
 
 
 @pytest.fixture
@@ -139,3 +142,62 @@ async def test_get_in(db_conn):
     assert offers_db_map[offers[0].id].certified_shop is True
     assert offers_db_map[offers[1].id].certified_shop is False
     assert offers_db_map[offers[2].id].certified_shop is None
+
+
+@pytest.fixture
+async def mock_rmq_publisher_client(mocker):
+    connection_mock = mocker.patch("app.utils.rabbitmq_adapter.connect_robust")
+    mock_channel = AsyncMock()
+    connection_mock.return_value.channel = mock_channel
+
+
+@pytest.mark.anyio
+async def test_get_unpopulated_offers(db_conn):
+    version = [(-1, -1), (-1, 0), (0, -1), (0, 0)]
+    offers = [
+        await offer_factory(
+            db_conn,
+            availability_version=versions[0],
+            buyable_version=versions[1],
+            offer_id=custom_uuid(i + 1),
+        )
+        for i, versions in enumerate(version)
+    ]
+
+    results = []
+    batches = 0
+    async for batch in crud.offer.get_unpopulated_offers(db_conn, 1):
+        batches += 1
+        results.extend([offer.id for offer in batch])
+
+    assert len(results) == 3
+    assert batches == 3
+    assert {offers[0].id, offers[1].id, offers[2].id} == set(results)
+
+
+@pytest.mark.anyio
+async def test_set_offers_as_populated(db_conn):
+    version = [(-1, -1), (-1, 0), (0, -1), (2, 2)]
+    offers = [
+        await offer_factory(
+            db_conn,
+            availability_version=versions[0],
+            buyable_version=versions[1],
+            offer_id=custom_uuid(i + 1),
+        )
+        for i, versions in enumerate(version)
+    ]
+
+    await crud.offer.set_offers_as_populated(
+        db_conn, [Entity.AVAILABILITY], [offer.id for offer in offers]
+    )
+
+    db_offers = {offer.id: offer for offer in await crud.offer.get_many(db_conn)}
+    assert db_offers[offers[0].id].availability_version == 0
+    assert db_offers[offers[0].id].buyable_version == -1
+    assert db_offers[offers[1].id].availability_version == 0
+    assert db_offers[offers[1].id].buyable_version == 0
+    assert db_offers[offers[2].id].availability_version == 0
+    assert db_offers[offers[2].id].buyable_version == -1
+    assert db_offers[offers[3].id].availability_version == 0
+    assert db_offers[offers[3].id].buyable_version == 2

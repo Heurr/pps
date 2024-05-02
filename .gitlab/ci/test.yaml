@@ -47,6 +47,11 @@ test:
     PPS_RABBITMQ_EXCHANGE_NAME: op-ex
     PPS_RABBITMQ_QUEUE_MAPPING: '{}'
     PPS_REDIS_HOST: redis
+
+    PPS_TARGET_ROUTING_KEY_MAP: '{"availability":"availability.v1.republish","buyable":"om-buyable.v1.republish"}'
+    PPS_REPLY_TO_ROUTING_KEY: "op-product-price.republish-info"
+    PPS_REPUBLISH_TO_ROUTING_KEY_MAP: '{"availability":"availability.v2.create.pps","buyable":"om-buyable.v1.update.pps"}'
+    PPS_USER_AGENT: "Product Price Service Republisher"
   needs:
     - build-dev
   script:

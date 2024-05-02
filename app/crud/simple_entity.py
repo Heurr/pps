@@ -5,6 +5,11 @@ from sqlalchemy import Table
 from sqlalchemy import text as sa_text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from app.constants import (
+    ENTITY_DATA_COLUMNS,
+    ENTITY_VERSION_COLUMNS,
+    Entity,
+)
 from app.crud.base import CreateSchemaTypeT, CRUDBase, DBSchemaTypeT
 from app.utils import dump_to_json
 
@@ -19,13 +24,12 @@ class CRUDSimpleEntityBase(
         table: Table,
         db_scheme: Type[DBSchemaTypeT],
         create_scheme: Type[CreateSchemaTypeT],
-        column: str,
-        version_column: str,
+        entity: Entity,
     ):
         super().__init__(table, db_scheme, create_scheme, [])
-        self.column = column
-        self.db_column_type = table.columns[column].type
-        self.version_column = version_column
+        self.column = ENTITY_DATA_COLUMNS[entity]
+        self.version_column = ENTITY_VERSION_COLUMNS[entity]
+        self.db_column_type = table.columns[self.column].type
 
     async def upsert_many(
         self, db_conn: AsyncConnection, entities: list[CreateSchemaTypeT]

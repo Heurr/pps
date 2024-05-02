@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
+from time import sleep
 
 import click
 import typer
@@ -9,6 +10,8 @@ from alembic import command as alembic_command
 from alembic.config import Config as AlembicConfig
 from app.constants import Entity
 from app.consumer_app import run_entity_consumer
+from app.db import db_adapter
+from app.jobs.entity_population import EntityPopulationJob
 from app.utils.log import prepare_logging
 from app.utils.sentry import init_sentry
 from app.worker_app import run_message_worker
@@ -69,6 +72,26 @@ def run_consumer(entity: Entity):
         logger.exception("%s consumer task failed", cname, exc_info=exc)
     finally:
         logger.info("%s consumer shutdown complete", cname)
+
+
+@app.command()
+def entity_population_job(entities: list[Entity]):
+    logger.info("Starting entity population job")
+
+    async def run_entity_population_job():
+        try:
+            async with db_adapter as db_engine:
+                job = EntityPopulationJob(db_engine, entities)
+                await job.run()
+        except Exception as exc:
+            logger.exception("Entity population job failed", exc_info=exc)
+
+    asyncio.run(run_entity_population_job())
+
+    sleep_duration = 60
+    logger.info("Sleeping for %s seconds to let metrics be scraped", sleep_duration)
+    sleep(sleep_duration)
+    logger.info("Entity population job finished")
 
 
 if __name__ == "__main__":

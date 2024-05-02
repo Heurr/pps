@@ -1,6 +1,8 @@
 from pathlib import Path
 
 import pytest
+from aio_pika import connect_robust
+from aio_pika.abc import AbstractChannel, AbstractExchange, ExchangeType
 from fastapi import FastAPI
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
@@ -9,7 +11,13 @@ from alembic import command as alembic_command
 from alembic.config import Config as AlembicConfig
 from app.api.deps import get_db_conn
 from app.api_app import create_api_app
-from app.config.settings import WorkerSetting, base_settings
+from app.config.settings import (
+    EntityPopulationJobSettings,
+    RabbitmqSettings,
+    RepublishSettings,
+    WorkerSetting,
+    base_settings,
+)
 from app.constants import Entity
 from app.db.pg import drop_db_tables
 from app.schemas.availability import AvailabilityMessageSchema
@@ -162,3 +170,41 @@ async def shop_worker(db_engine, db_conn, worker_settings, worker_redis):
             Entity.SHOP, worker_settings, db_engine, worker_redis, ShopMessageSchema
         ),
     )
+
+
+@pytest.fixture
+def rmq_settings() -> RabbitmqSettings:
+    settings = RabbitmqSettings()
+    settings.RABBITMQ_EXCHANGE_NAME = "test-ex"
+    return settings
+
+
+@pytest.fixture
+async def republish_settings(rmq_settings: RabbitmqSettings) -> RepublishSettings:
+    settings = RepublishSettings()
+    settings.RABBITMQ_EXCHANGE_NAME = rmq_settings.RABBITMQ_EXCHANGE_NAME
+    return settings
+
+
+@pytest.fixture
+async def rmq_channel(rmq_settings: RabbitmqSettings) -> AbstractChannel:
+    connection = await connect_robust(rmq_settings.rabbitmq_dsn())
+    channel = await connection.channel()
+    yield channel
+    await connection.close()
+
+
+@pytest.fixture
+async def rmq_exchange(rmq_channel: AbstractChannel, rmq_settings) -> AbstractExchange:
+    exchange = await rmq_channel.declare_exchange(
+        rmq_settings.RABBITMQ_EXCHANGE_NAME,
+        type=ExchangeType.TOPIC,
+        auto_delete=True,
+    )
+    yield exchange
+
+
+@pytest.fixture
+async def missing_job_settings():
+    settings = EntityPopulationJobSettings()
+    return settings

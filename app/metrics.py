@@ -59,6 +59,12 @@ DB_CONNECTIONS = Gauge(
     ["state"],
 )
 
+UNPOPULATED_ENTITIES = Counter(
+    "unpopulated_entities",
+    "Number of unpopulated entities requested for population",
+    ["entity"],
+)
+
 
 class PerformanceTimer:
     def __init__(self, metric: Gauge):

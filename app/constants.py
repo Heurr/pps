@@ -78,6 +78,7 @@ PLATFORM_COUNTRY_MAP = {
     PlatformCode.OCS: [CountryCode.BG, CountryCode.HU, CountryCode.RO],
     PlatformCode.CENEJE: [CountryCode.BA, CountryCode.HR, CountryCode.RS, CountryCode.SI],
 }
+
 COUNTRY_PLATFORM_MAP = {
     country: platform
     for platform, countries in PLATFORM_COUNTRY_MAP.items()
@@ -86,6 +87,15 @@ COUNTRY_PLATFORM_MAP = {
 
 RABBITMQ_MSG_CONTENT_TYPE_JSON = "application/json"
 
+ENTITY_DATA_COLUMNS: dict[Entity, str] = {
+    Entity.AVAILABILITY: "in_stock",
+    Entity.BUYABLE: "buyable",
+}
+
+ENTITY_VERSION_COLUMNS: dict[Entity, str] = {
+    Entity.AVAILABILITY: "availability_version",
+    Entity.BUYABLE: "buyable_version",
+}
 
 PRICE_EVENT_QUEUE = "price-events"
 

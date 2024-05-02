@@ -2,8 +2,8 @@ import asyncio
 
 import orjson
 import pytest
-from aio_pika import ExchangeType, Message, connect_robust
-from aio_pika.abc import AbstractChannel, AbstractExchange, DeliveryMode
+from aio_pika import Message
+from aio_pika.abc import AbstractExchange, DeliveryMode
 from redis.asyncio import Redis
 
 from app.config.settings import ConsumerSettings
@@ -20,7 +20,7 @@ REDIS_KEYS_MAP = {
 
 
 @pytest.fixture
-def settings() -> ConsumerSettings:
+def settings(rmq_settings) -> ConsumerSettings:
     settings = ConsumerSettings()
     settings.CONSUMER_RABBITMQ_CREATE_QUEUES = True
     settings.CONSUMER_RABBITMQ_QUEUE_POSTFIX = "test"
@@ -31,7 +31,6 @@ def settings() -> ConsumerSettings:
         Entity.BUYABLE: {},
         Entity.AVAILABILITY: {},
     }
-    settings.RABBITMQ_PREFETCH_COUNT = 1
     settings.CONSUMER_RABBITMQ_QUEUE_MAPPING = {
         Entity.SHOP: {
             "redisPushInterval": 0.05,
@@ -74,24 +73,6 @@ def settings() -> ConsumerSettings:
 
 
 @pytest.fixture
-async def rmq_channel(settings) -> AbstractChannel:
-    connection = await connect_robust(settings.rabbitmq_dsn())
-    channel = await connection.channel()
-    yield channel
-    await connection.close()
-
-
-@pytest.fixture
-async def rmq_exchange(rmq_channel: AbstractChannel, settings) -> AbstractExchange:
-    exchange = await rmq_channel.declare_exchange(
-        settings.RABBITMQ_EXCHANGE_NAME,
-        type=ExchangeType.TOPIC,
-        auto_delete=True,
-    )
-    yield exchange
-
-
-@pytest.fixture
 async def redis_full(settings, free_memory_in_pct: int) -> Redis:
     async with RedisAdapter(settings.redis_dsn, decode_responses=False) as redis:
         await redis.flushdb()
@@ -125,6 +106,8 @@ async def consumer(settings: ConsumerSettings, entity: Entity):
     It is used in test_consume
     """
     consumer = Consumer(entity, settings)
+    consumer.rmq.prefetch_count = 1
+    consumer.iterator_timeout = 0.01
     consumer.redis_capacity = 90
     task = asyncio.create_task(consumer.run())
     await asyncio.sleep(0.05)

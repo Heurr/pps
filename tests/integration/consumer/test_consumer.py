@@ -115,8 +115,8 @@ async def test_consume_filtered_country_is_skipped(  # noqa: PLR0913
         msg_body(entity.value, action, country="CZ"),  # skip CZ
     )
 
+    await asyncio.sleep(0.1)
     await wait_for_empty_rmq_queue(rmq_channel, entity, settings, 20)
-    await asyncio.sleep(0.05)
     assert await redis.keys() == []
     assert await redis.llen(REDIS_KEYS_MAP[entity.value]) == 0
     assert caplog.messages[0] == "Messages skipped: 1. Countries skipped: {'CZ'}"

@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import Field, field_validator
@@ -42,6 +43,15 @@ class OfferCreateSchema(EntityModel):
     buyable: bool | None = None
     availability_version: int = -1
     buyable_version: int = -1
+
+
+class PopulationOfferSchema(BaseModel):
+    id: UUID
+    created_at: datetime
+    in_stock: bool | None = None
+    buyable: bool | None = None
+    availability_version: int | None = None
+    buyable_version: int | None = None
 
 
 class OfferDBSchema(OfferCreateSchema, BaseDBSchema):
