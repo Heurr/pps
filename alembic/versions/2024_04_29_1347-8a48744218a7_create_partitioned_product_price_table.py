@@ -27,6 +27,15 @@ def upgrade() -> None:
     country_code_type.create(conn, checkfirst=True)
     currency_code_type = sa_pg.ENUM(name="currencycode", create_type=False)
     currency_code_type.create(conn, checkfirst=True)
+    product_price_type = sa_pg.ENUM(
+        "ALL_OFFERS",
+        "MARKETPLACE",
+        "IN_STOCK",
+        "IN_STOCK_CERTIFIED",
+        name="product_price_type",
+        create_type=False,
+    )
+    product_price_type.create(conn, checkfirst=True)
 
     op.create_table(
         "product_prices",
@@ -39,13 +48,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "price_type",
-            sa_pg.ENUM(
-                "ALL_OFFERS",
-                "MARKETPLACE",
-                "IN_STOCK",
-                "IN_STOCK_CERTIFIED",
-                name="product_price_type",
-            ),
+            product_price_type,
             nullable=False,
         ),
         sa.Column("min_price", sa.Numeric(precision=12, scale=2), nullable=False),

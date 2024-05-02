@@ -1,10 +1,12 @@
+import datetime
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app import crud
-from app.constants import CountryCode, CurrencyCode
+from app.constants import CountryCode, CurrencyCode, ProductPriceType
 from app.schemas.offer import OfferCreateSchema, OfferDBSchema
+from app.schemas.product_price import ProductPriceCreateSchema, ProductPriceDBSchema
 from app.schemas.shop import ShopCreateSchema, ShopDBSchema
 from app.utils import utc_now
 from tests.utils import (
@@ -82,6 +84,38 @@ async def offer_factory(
             certified_shop=certified_shop,
             created_at=utc_now(),
             updated_at=utc_now(),
+        )
+    else:
+        return schema
+
+
+async def product_price_factory(
+    db_conn: AsyncConnection | None = None,
+    db_schema: bool = False,
+    day: datetime.date | None = None,
+    product_id: UUID | None = None,
+    country_code: CountryCode | None = None,
+    price_type: ProductPriceType | None = None,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    currency_code: CurrencyCode | None = None,
+    updated_at: str | None = None,
+) -> ProductPriceCreateSchema | ProductPriceDBSchema:
+    schema = ProductPriceCreateSchema(
+        product_id=product_id or random_one_id(),
+        country_code=country_code or random_country_code(),
+        price_type=price_type or ProductPriceType.IN_STOCK,
+        min_price=min_price or float(random_int()),
+        max_price=max_price or float(random_int()),
+        currency_code=currency_code or random_currency_code(),
+        day=day or datetime.date.today(),
+    )
+    if db_conn:
+        return (await crud.product_price.create_many(db_conn, [schema]))[0]
+    elif db_schema:
+        return ProductPriceDBSchema(
+            **schema.model_dump(),
+            updated_at=updated_at or utc_now(),
         )
     else:
         return schema
