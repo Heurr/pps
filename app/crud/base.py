@@ -11,7 +11,6 @@ from sqlalchemy import Table
 from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
-from sqlalchemy.sql.elements import Label
 
 from app.schemas.base import EntityModel
 from app.utils import dump_to_json, utc_now
@@ -26,19 +25,13 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT]):
         self,
         table: Table,
         db_scheme: Type[DBSchemaTypeT],
-        create_scheme: Type[CreateSchemaTypeT],
         updatable_columns: list[str],
     ):
         self.table = table
         self.db_scheme = db_scheme
-        self.create_scheme = create_scheme
         self.has_updated_at = "updated_at" in self.table.c
         self.updatable_columns = updatable_columns
         self.logger = logging.getLogger(__name__)
-
-    @staticmethod
-    def prefixed_columns(table: Table) -> list[Label]:
-        return [c.label(f"{table.name}_{c.name}") for c in table.columns]
 
     async def get_many(
         self, db_conn: AsyncConnection, *, skip: int = 0, limit: int = 100
@@ -136,11 +129,11 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT]):
         ]
         return await self._do_upsert_many(db_conn, self.updatable_columns, values)
 
-    async def remove_many_with_version_checking(
+    async def remove_many(
         self, db_conn: AsyncConnection, ids_versions: list[tuple[UUID, int]]
     ) -> list[UUID]:
         """
-        Only remove rows with version bigger then old version
+        Delete rows with given IDs.
 
         :param db_conn: Database connection
         :param ids_versions: Tuple of primary keys and versions corresponding to the primary key
@@ -157,7 +150,7 @@ class CRUDBase(Generic[DBSchemaTypeT, CreateSchemaTypeT]):
             )
             DELETE FROM {table}
             USING q
-            WHERE {table}.id = q.id AND {table}.version < q.version
+            WHERE {table}.id = q.id
             RETURNING {table}.id
             """.format(
                 table=self.table.name, json_data=json_data

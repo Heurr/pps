@@ -47,6 +47,7 @@ class OfferCreateSchema(EntityModel):
 
 class PopulationOfferSchema(BaseModel):
     id: UUID
+    product_id: UUID
     created_at: datetime
     in_stock: bool | None = None
     buyable: bool | None = None

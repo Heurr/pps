@@ -13,10 +13,6 @@ from tests.utils import (
 )
 
 
-@pytest.mark.skip(
-    reason="This will be fixed in next MR "
-    "We need to update application code to use composite PK."
-)
 @pytest.mark.anyio
 async def test_process_many_offer_create_update_messages(
     db_conn, worker_redis, offer_worker, caplog
@@ -30,6 +26,7 @@ async def test_process_many_offer_create_update_messages(
             Action.CREATE,
             {
                 "id": str(offer_1.id),
+                "productId": str(offer_1.product_id),
                 "version": 3,
             },
         ),
@@ -38,6 +35,7 @@ async def test_process_many_offer_create_update_messages(
             Action.UPDATE,
             {
                 "id": str(offer_2.id),
+                "productId": str(offer_2.product_id),
                 "version": 1,
             },
         ),

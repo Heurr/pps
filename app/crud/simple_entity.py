@@ -23,10 +23,9 @@ class CRUDSimpleEntityBase(
         self,
         table: Table,
         db_scheme: Type[DBSchemaTypeT],
-        create_scheme: Type[CreateSchemaTypeT],
         entity: Entity,
     ):
-        super().__init__(table, db_scheme, create_scheme, [])
+        super().__init__(table, db_scheme, [])
         self.column = ENTITY_DATA_COLUMNS[entity]
         self.version_column = ENTITY_VERSION_COLUMNS[entity]
         self.db_column_type = table.columns[self.column].type
@@ -34,7 +33,9 @@ class CRUDSimpleEntityBase(
     async def upsert_many(
         self, db_conn: AsyncConnection, entities: list[CreateSchemaTypeT]
     ) -> list[UUID]:
-        """Update column value for all entities with version bigger then old version"""
+        """
+        Update column value for all entities with given IDs.
+        """
         entities.sort(key=lambda e: e.id)
         json_data = dump_to_json(
             [(e.id, getattr(e, self.column), e.version) for e in entities]
@@ -49,7 +50,7 @@ class CRUDSimpleEntityBase(
             UPDATE {table}
             SET {column} = q.value, {version_column} = q.version
             FROM q
-            WHERE {table}.id = q.id AND {table}.{version_column} < q.version
+            WHERE {table}.id = q.id
             RETURNING {table}.id
             """.format(
                 table=self.table.name,
@@ -63,10 +64,12 @@ class CRUDSimpleEntityBase(
         updated_ids = [r.id for r in res]
         return updated_ids
 
-    async def remove_many_with_version_checking(
+    async def remove_many(
         self, db_conn: AsyncConnection, ids_versions: list[tuple[UUID, int]]
     ) -> list[UUID]:
-        """Set column value to NULL for all entities with version bigger then old version"""
+        """
+        Set column value to NULL for all entities with given IDs.
+        """
         ids_versions.sort(key=lambda item: item[0])
         json_data = dump_to_json(ids_versions)
 
@@ -78,7 +81,7 @@ class CRUDSimpleEntityBase(
             )
             UPDATE {table} SET {column} = NULL, {version_column} = q.version
             FROM q
-            WHERE {table}.id = q.id AND {table}.{version_column} < q.version
+            WHERE {table}.id = q.id
             RETURNING {table}.id
             """.format(
                 table=self.table.name,

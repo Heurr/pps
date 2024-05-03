@@ -6,7 +6,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.config.settings import ServiceSettings
-from app.constants import PRICE_EVENT_QUEUE, Entity
+from app.constants import ENTITY_VERSION_COLUMNS, PRICE_EVENT_QUEUE, Entity
 from app.crud import crud_from_entity
 from app.crud.base import CreateSchemaTypeT, CRUDBase, DBSchemaTypeT
 from app.metrics import UPDATE_METRICS
@@ -82,12 +82,21 @@ class BaseEntityService(
         return _should_be_updated
 
     async def remove_many(
-        self, db_conn: AsyncConnection, redis: Redis, ids_versions: list[tuple[UUID, int]]
+        self,
+        db_conn: AsyncConnection,
+        redis: Redis,
+        ids_versions: list[tuple[UUID, int]],
     ) -> list[UUID]:
         old_entities = await self.crud.get_in(db_conn, [idv[0] for idv in ids_versions])
-        deleted_ids = await self.crud.remove_many_with_version_checking(
-            db_conn, ids_versions
-        )
+        version_column = ENTITY_VERSION_COLUMNS.get(self.entity, "version")
+        versions = {e.id: getattr(e, version_column) for e in old_entities}
+        ids_versions_newer = [
+            idv
+            for idv in ids_versions
+            if idv[0] in versions and idv[1] >= versions[idv[0]]
+        ]
+
+        deleted_ids = await self.crud.remove_many(db_conn, ids_versions_newer)
         deleted_ids_set = set(deleted_ids)
         price_events = await self.generate_price_events(
             db_conn,

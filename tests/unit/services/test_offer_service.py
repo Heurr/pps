@@ -181,9 +181,7 @@ async def test_generate_price_event_delete(
     offer_ids = {o.id for o in offers}
     crud_get_in_mock = mocker.patch.object(crud.offer, "get_in")
     crud_get_in_mock.return_value = offers
-    crud_delete_mock = mocker.patch.object(
-        crud.offer, "remove_many_with_version_checking"
-    )
+    crud_delete_mock = mocker.patch.object(crud.offer, "remove_many")
     crud_delete_mock.side_effect = lambda _db_conn, ids_versions: [
         idv[0] for idv in ids_versions if idv[0] in offer_ids and idv[1] >= 2
     ]

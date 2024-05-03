@@ -9,9 +9,7 @@ from app.schemas.offer import OfferDBSchema
 
 class CRUDAvailability(CRUDSimpleEntityBase[OfferDBSchema, AvailabilityCreateSchema]):
     def __init__(self):
-        super().__init__(
-            offer_table, OfferDBSchema, AvailabilityCreateSchema, Entity.AVAILABILITY
-        )
+        super().__init__(offer_table, OfferDBSchema, Entity.AVAILABILITY)
 
 
 crud_availability = CRUDAvailability()

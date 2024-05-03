@@ -7,7 +7,7 @@ from app.schemas.offer import OfferDBSchema
 
 class CRUDBuyable(CRUDSimpleEntityBase[OfferDBSchema, BuyableCreateSchema]):
     def __init__(self):
-        super().__init__(offer_table, OfferDBSchema, BuyableCreateSchema, Entity.BUYABLE)
+        super().__init__(offer_table, OfferDBSchema, Entity.BUYABLE)
 
 
 crud_buyable = CRUDBuyable()

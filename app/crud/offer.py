@@ -1,8 +1,8 @@
 import logging
-from typing import AsyncGenerator, Type
+from typing import AsyncGenerator
 from uuid import UUID
 
-from sqlalchemy import Table, bindparam, text
+from sqlalchemy import bindparam, text, tuple_
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.constants import (
@@ -10,6 +10,7 @@ from app.constants import (
     Entity,
 )
 from app.crud.base import CRUDBase
+from app.custom_types import OfferPk
 from app.db.tables.offer import offer_table
 from app.schemas.offer import OfferCreateSchema, OfferDBSchema, PopulationOfferSchema
 
@@ -17,16 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema]):
-    def __init__(
-        self,
-        table: Table,
-        db_scheme: Type[OfferDBSchema],
-        create_scheme: Type[OfferCreateSchema],
-    ):
+    def __init__(self):
         super().__init__(
-            table,
-            db_scheme,
-            create_scheme,
+            offer_table,
+            OfferDBSchema,
             ["version", "product_id", "shop_id", "price", "currency_code", "updated_at"],
         )
 
@@ -57,7 +52,7 @@ class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema]):
         stmt = (
             text(
                 """
-            SELECT offers.id, offers.created_at, offers.in_stock, offers.buyable,
+            SELECT offers.id, offers.product_id, offers.created_at, offers.in_stock, offers.buyable,
             offers.availability_version, offers.buyable_version
             FROM offers
             WHERE offers.buyable_version = :version or offers.availability_version = :version
@@ -71,21 +66,17 @@ class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema]):
                 yield [PopulationOfferSchema.model_validate(row) for row in batch]
 
     async def set_offers_as_populated(
-        self, db_conn: AsyncConnection, entities: list[Entity], ids: list[UUID]
+        self, db_conn: AsyncConnection, entities: list[Entity], pks: list[OfferPk]
     ) -> None:
         """
         Set offers as populated for given entities by setting their version to 0.
         """
         stmt = (
             self.table.update()
-            .where(self.table.c.id.in_(ids))
+            .where(tuple_(self.table.c.product_id, self.table.c.id).in_(pks))
             .values({ENTITY_VERSION_COLUMNS[entity]: 0 for entity in entities})
         )
         await db_conn.execute(stmt)
 
 
-crud_offer = CRUDOffer(
-    table=offer_table,
-    db_scheme=OfferDBSchema,
-    create_scheme=OfferCreateSchema,
-)
+crud_offer = CRUDOffer()

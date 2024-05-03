@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from app import crud
 from app.config.settings import EntityPopulationJobSettings, RepublishSettings
 from app.constants import ENTITY_VERSION_COLUMNS, Entity
+from app.custom_types import OfferPk
 from app.metrics import UNPOPULATED_ENTITIES
 from app.republish.republish_client import RabbitmqRepublishClient
 from app.schemas.offer import PopulationOfferSchema
@@ -62,16 +63,16 @@ class EntityPopulationJob:
         it returns them for further processing
         """
         expire_threshold = utc_now() - timedelta(seconds=self.expire_time)
-        expired_ids = []
+        expired_pks = []
         unpopulated_ids = defaultdict(list)
         for offer in batch:
             if offer.created_at < expire_threshold:
-                expired_ids.append(offer.id)
+                expired_pks.append(OfferPk(offer.product_id, offer.id))
                 continue
             for entity in self.entities:
                 if getattr(offer, ENTITY_VERSION_COLUMNS[entity]) == -1:
                     unpopulated_ids[entity].append(offer.id)
 
-        await crud.offer.set_offers_as_populated(db_conn, self.entities, expired_ids)
-        self.logger.info("Expired %d offers", len(expired_ids))
+        await crud.offer.set_offers_as_populated(db_conn, self.entities, expired_pks)
+        self.logger.info("Expired %d offers", len(expired_pks))
         return unpopulated_ids

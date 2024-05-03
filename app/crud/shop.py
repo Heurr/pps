@@ -1,7 +1,4 @@
 import logging
-from typing import Type
-
-from sqlalchemy import Table
 
 from app.db.tables.shop import shop_table
 from app.schemas.shop import ShopCreateSchema, ShopDBSchema
@@ -12,22 +9,12 @@ logger = logging.getLogger(__name__)
 
 
 class CRUDShop(CRUDBase[ShopDBSchema, ShopCreateSchema]):
-    def __init__(
-        self,
-        table: Table,
-        db_scheme: Type[ShopDBSchema],
-        create_scheme: Type[ShopCreateSchema],
-    ):
+    def __init__(self):
         super().__init__(
-            table,
-            db_scheme,
-            create_scheme,
+            shop_table,
+            ShopDBSchema,
             ["version", "certified", "verified", "paying", "enabled", "updated_at"],
         )
 
 
-crud_shop = CRUDShop(
-    table=shop_table,
-    db_scheme=ShopDBSchema,
-    create_scheme=ShopCreateSchema,
-)
+crud_shop = CRUDShop()

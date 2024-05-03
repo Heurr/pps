@@ -7,6 +7,7 @@ from pytest_mock import MockFixture
 
 from app.config.settings import EntityPopulationJobSettings, RepublishSettings
 from app.constants import Entity
+from app.custom_types import OfferPk
 from app.jobs.entity_population import EntityPopulationJob
 from app.schemas.offer import PopulationOfferSchema
 from app.utils import utc_now
@@ -46,6 +47,7 @@ async def test_process(entity_population_job_mock: EntityPopulationJob, mocker):
     objects = [
         PopulationOfferSchema(
             id=custom_uuid(i),
+            product_id=custom_uuid(1),
             created_at=date,
             availability_version=version[0],
             buyable_version=version[1],
@@ -61,7 +63,7 @@ async def test_process(entity_population_job_mock: EntityPopulationJob, mocker):
     }
     mock_crud.assert_called_once()
     assert mock_crud.call_args.args[1] == [Entity.BUYABLE, Entity.AVAILABILITY]
-    assert mock_crud.call_args.args[2] == [objects[0].id]
+    assert mock_crud.call_args.args[2] == [OfferPk(objects[0].product_id, objects[0].id)]
 
 
 @pytest.mark.anyio
@@ -75,7 +77,9 @@ async def test_run(entity_population_job_mock: EntityPopulationJob, mocker: Mock
     async def get_unpopulated_offers_mock():
         batch = 3
         objects = [
-            PopulationOfferSchema(id=custom_uuid(i + 1), created_at=utc_now())
+            PopulationOfferSchema(
+                id=custom_uuid(i + 1), product_id=custom_uuid(i + 1), created_at=utc_now()
+            )
             # 5 Batches of 3 objects
             for i in range(15)
         ]
