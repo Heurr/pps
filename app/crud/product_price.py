@@ -9,9 +9,9 @@ from sqlalchemy import Table, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from app.custom_types import ProductPricePk
 from app.db.tables.product_price import product_price_table
 from app.schemas.product_price import ProductPriceCreateSchema, ProductPriceDBSchema
-from app.types import ProductPricePk
 from app.utils import utc_now
 from app.utils.sentry import set_sentry_context
 

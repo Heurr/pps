@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import crud
 from app.constants import ProductPriceType
-from app.types import ProductPricePk
+from app.custom_types import ProductPricePk
 from app.utils import utc_now
 from tests.factories import product_price_factory
 from tests.utils import compare, custom_uuid
