@@ -1,0 +1,21 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ .Values.deployment.name }}-metrics
+  labels:
+    {{- include "product-price.labels" . | nindent 4 }} pod-monitor
+    prometheus: {{ .Release.Namespace }}-prometheus
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.deployment.name }}
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 5s
+      path: /metrics
+    - port: http
+      interval: 5s
+      path: /-/metrics
