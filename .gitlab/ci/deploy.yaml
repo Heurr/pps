@@ -37,7 +37,7 @@
     GCP_ENVIRONMENT: dev
   script:
     - /entrypoint.sh "echo done"
-    - helm3 uninstall --namespace="$KUBE_NAMESPACE" "$CI_PROJECT_NAME"
+    - helm3 uninstall --namespace="$KUBE_NAMESPACE" product-price
 
 cleanup-dev-manual:
   extends: .cleanup-dev
