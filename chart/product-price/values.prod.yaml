@@ -21,3 +21,11 @@ autoscaling:
     enabled: true
     minReplicas: 3
     maxReplicas: 6
+  consumer:
+    pollingInterval: 10
+    minReplicaCount: 1
+    maxReplicaCount: 12
+  workers:
+    pollingInterval: 10
+    minReplicaCount: 1
+    maxReplicaCount: 12
