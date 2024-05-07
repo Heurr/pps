@@ -1,8 +1,9 @@
 import pytest
+from _pytest.mark import param
 from sqlalchemy.exc import DBAPIError
 
 from app import crud
-from app.constants import Entity
+from app.constants import Aggregate, Entity, ProductPriceType
 from app.custom_types import OfferPk
 from app.schemas.offer import OfferDBSchema
 from tests.factories import offer_factory, shop_factory
@@ -224,3 +225,66 @@ async def test_set_offers_as_populated(db_conn):
     assert db_offers[offers[2].id].buyable_version == -1
     assert db_offers[offers[3].id].availability_version == 0
     assert db_offers[offers[3].id].buyable_version == 2
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "price_type, aggregate, expected",
+    [
+        param(ProductPriceType.ALL_OFFERS, Aggregate.MIN, 1.0, id="min_all_offers"),
+        param(ProductPriceType.ALL_OFFERS, Aggregate.MAX, 8.0, id="max_all_offers"),
+        param(ProductPriceType.IN_STOCK, Aggregate.MIN, 3.0, id="min_in_stock_offers"),
+        param(ProductPriceType.IN_STOCK, Aggregate.MAX, 8.0, id="max_in_stock_offers"),
+        param(
+            ProductPriceType.MARKETPLACE, Aggregate.MIN, 4.0, id="min_marketplace_offers"
+        ),
+        param(
+            ProductPriceType.MARKETPLACE, Aggregate.MAX, 6.0, id="max_marketplace_offers"
+        ),
+        param(
+            ProductPriceType.IN_STOCK_CERTIFIED,
+            Aggregate.MIN,
+            7.0,
+            id="min_certified_offers",
+        ),
+        param(
+            ProductPriceType.IN_STOCK_CERTIFIED,
+            Aggregate.MAX,
+            8.0,
+            id="max_certified_offers",
+        ),
+    ],
+)
+async def test_get_price(db_conn, price_type, aggregate, expected):
+    """
+    Offer 1 -- ALL OFFERS
+    Offer 2 -- ALL OFFERS
+    Offer 3 -- IN STOCK
+    Offer 4 -- IN STOCK, BUYABLE
+    Offer 5 -- BUYABLE
+    Offer 6 -- BUYABLE
+    Offer 7 -- CERTIFIED
+    Offer 8 -- CERTIFIED
+    """
+    product_id = custom_uuid(1)
+    in_stocks = [False, False, True, True, False, False, True, True]
+    buyables = [False, False, False, True, True, True, False, False]
+    shop_ids = [None, None, None, None, None, None, custom_uuid(1), custom_uuid(1)]
+    await shop_factory(db_conn, certified=True, shop_id=custom_uuid(1))
+    offers = [
+        await offer_factory(
+            db_conn,
+            price=i + 1,
+            offer_id=custom_uuid(i + 1),
+            product_id=product_id,
+            in_stock=in_stock,
+            buyable=buyable,
+            shop_id=shop_id,
+        )
+        for in_stock, buyable, i, shop_id in zip(in_stocks, buyables, range(8), shop_ids)
+    ]
+
+    price = await crud.offer.get_price_for_product(
+        db_conn, product_id, price_type, aggregate
+    )
+    assert float(price) == expected

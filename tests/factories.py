@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from app import crud
 from app.constants import CountryCode, CurrencyCode, ProductPriceType
 from app.schemas.offer import OfferCreateSchema, OfferDBSchema
+from app.schemas.price_event import PriceEvent, PriceEventAction
 from app.schemas.product_price import ProductPriceCreateSchema, ProductPriceDBSchema
 from app.schemas.shop import ShopCreateSchema, ShopDBSchema
 from app.utils import utc_now
@@ -99,7 +100,7 @@ async def product_price_factory(
     min_price: float | None = None,
     max_price: float | None = None,
     currency_code: CurrencyCode | None = None,
-    updated_at: str | None = None,
+    updated_at: datetime.datetime | None = None,
 ) -> ProductPriceCreateSchema | ProductPriceDBSchema:
     schema = ProductPriceCreateSchema(
         product_id=product_id or random_one_id(),
@@ -109,13 +110,33 @@ async def product_price_factory(
         max_price=max_price or float(random_int()),
         currency_code=currency_code or random_currency_code(),
         day=day or datetime.date.today(),
+        updated_at=updated_at or utc_now(),
     )
     if db_conn:
         return (await crud.product_price.create_many(db_conn, [schema]))[0]
     elif db_schema:
-        return ProductPriceDBSchema(
-            **schema.model_dump(),
-            updated_at=updated_at or utc_now(),
-        )
+        return ProductPriceDBSchema(**schema.model_dump())
     else:
         return schema
+
+
+def price_event_factory(
+    action: PriceEventAction | None = None,
+    price: float | None = None,
+    old_price: float | None = None,
+    product_id: UUID | None = None,
+    price_type: ProductPriceType | None = None,
+    created_at: datetime.datetime | None = None,
+    country_code: CountryCode | None = None,
+    currency_code: CurrencyCode | None = None,
+) -> PriceEvent:
+    return PriceEvent(
+        action=action or PriceEventAction.UPSERT,
+        price=price or float(random_int()),
+        old_price=old_price,
+        product_id=product_id or random_one_id(),
+        type=price_type or ProductPriceType.IN_STOCK,
+        created_at=created_at or utc_now(),
+        country_code=country_code or random_country_code(),
+        currency_code=currency_code or random_currency_code(),
+    )

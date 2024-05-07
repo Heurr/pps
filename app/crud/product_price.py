@@ -9,10 +9,9 @@ from sqlalchemy import Table, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from app.custom_types import ProductPricePk
+from app.custom_types import ProductPriceDeletePk, ProductPricePk
 from app.db.tables.product_price import product_price_table
 from app.schemas.product_price import ProductPriceCreateSchema, ProductPriceDBSchema
-from app.utils import utc_now
 from app.utils.sentry import set_sentry_context
 
 
@@ -44,11 +43,7 @@ class CRUDProductPrice:
     async def create_many(
         self, db_conn: AsyncConnection, objs_in: list[ProductPriceCreateSchema]
     ) -> list[ProductPriceDBSchema]:
-        now = utc_now()
         all_values = [{**obj_in.model_dump()} for obj_in in objs_in]
-
-        for values in all_values:
-            values["updated_at"] = now
 
         stmt = self.table.insert().values(all_values).returning(self.table)
         rows = (await db_conn.execute(stmt)).fetchall()
@@ -88,31 +83,23 @@ class CRUDProductPrice:
         db_conn: AsyncConnection,
         entities: list[ProductPriceCreateSchema],
     ) -> list[ProductPricePk]:
-        now = utc_now()
-        values = [{**e.model_dump(), "updated_at": now} for e in entities]
+        values = [{**e.model_dump()} for e in entities]
         return await self._do_upsert_many(db_conn, self.updatable_columns, values)
 
-    async def remove_many(
-        self, db_conn: AsyncConnection, obj_pks: list[ProductPricePk]
+    async def remove_many_for_all_days(
+        self, db_conn: AsyncConnection, obj_pks: list[ProductPriceDeletePk]
     ) -> list[ProductPricePk]:
         # Sort by PKs
-        obj_pks.sort(key=lambda item: [item.day, item.product_id, item.price_type])
+        obj_pks.sort(key=lambda item: [item[0], item[1]])
 
         stmt = (
             self.table.delete()
-            .where(
-                tuple_(
-                    self.table.c.day, self.table.c.product_id, self.table.c.price_type
-                ).in_(obj_pks)
-            )
+            .where(tuple_(self.table.c.product_id, self.table.c.price_type).in_(obj_pks))
             .returning(self.table.c.product_id, self.table.c.day, self.table.c.price_type)
         )
 
         res = await db_conn.execute(stmt)
-        deleted_ids = [
-            ProductPricePk(day=r.day, product_id=r.product_id, price_type=r.price_type)
-            for r in res
-        ]
+        deleted_ids = [ProductPricePk(r.day, r.product_id, r.price_type) for r in res]
         return deleted_ids
 
 

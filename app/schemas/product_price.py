@@ -15,9 +15,8 @@ class ProductPriceCreateSchema(BaseModel):
     min_price: float
     max_price: float
     currency_code: CurrencyCode
+    updated_at: dt.datetime
 
 
 class ProductPriceDBSchema(ProductPriceCreateSchema):
-    updated_at: dt.datetime
-
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)

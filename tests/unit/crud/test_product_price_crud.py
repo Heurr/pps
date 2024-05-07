@@ -94,7 +94,9 @@ async def test_delete_product_prices(db_conn):
         product_prices[0].price_type,
     )
 
-    deleted_ids = await crud.product_price.remove_many(db_conn, [offer_pk])
+    deleted_ids = await crud.product_price.remove_many_for_all_days(
+        db_conn, [(product_prices[0].product_id, product_prices[0].price_type)]
+    )
 
     assert deleted_ids == [offer_pk]
 

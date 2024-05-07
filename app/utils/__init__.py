@@ -12,6 +12,10 @@ def utc_now() -> dt.datetime:
     return dt.datetime.now(dt.timezone.utc)
 
 
+def utc_today() -> dt.date:
+    return utc_now().date()
+
+
 def version_now() -> int:
     return int(dt.datetime.now(dt.timezone.utc).timestamp())
 

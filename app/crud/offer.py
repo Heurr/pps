@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.constants import (
     ENTITY_VERSION_COLUMNS,
+    Aggregate,
     Entity,
+    ProductPriceType,
 )
 from app.crud.base import CRUDBase
 from app.custom_types import OfferPk
@@ -24,6 +26,12 @@ class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema]):
             OfferDBSchema,
             ["version", "product_id", "shop_id", "price", "currency_code", "updated_at"],
         )
+
+    SQL_FILTERS = {
+        ProductPriceType.MARKETPLACE: "offers.buyable = TRUE",
+        ProductPriceType.IN_STOCK_CERTIFIED: "shops.certified = TRUE AND offers.in_stock = TRUE",
+        ProductPriceType.IN_STOCK: "offers.in_stock = TRUE",
+    }
 
     async def get_in(
         self, db_conn: AsyncConnection, obj_ids: list[UUID]
@@ -77,6 +85,34 @@ class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema]):
             .values({ENTITY_VERSION_COLUMNS[entity]: 0 for entity in entities})
         )
         await db_conn.execute(stmt)
+
+    async def get_price_for_product(
+        self,
+        db_conn: AsyncConnection,
+        product_id: UUID,
+        price_type: ProductPriceType,
+        aggregate: Aggregate,
+    ) -> float | None:
+        sql_filter = self.SQL_FILTERS.get(price_type)
+        additional_condition = f"AND {sql_filter}" if sql_filter else ""
+        additional_join = (
+            "LEFT JOIN shops ON shops.id = offers.shop_id"
+            if price_type == ProductPriceType.IN_STOCK_CERTIFIED
+            else ""
+        )
+
+        stmt = text(
+            f"""
+            SELECT {aggregate}(offers.price)
+            FROM offers
+            {additional_join}
+            WHERE offers.product_id = :product_id
+            {additional_condition}
+            """
+        ).bindparams(bindparam("product_id", value=product_id))
+
+        row = await db_conn.execute(stmt)
+        return row.first()[0]  # type: ignore
 
 
 crud_offer = CRUDOffer()

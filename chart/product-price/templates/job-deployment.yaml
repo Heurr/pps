@@ -1,0 +1,54 @@
+{{- range $name, $configValues := .Values.jobs -}}
+{{- with $ }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.name }}-job-{{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "product-price.labels" . | nindent 4 }} job-{{ $name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "product-price.selectorLabels" . | nindent 6 }} job-{{ $name }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "product-price.selectorLabels" . | nindent 8 }} job-{{ $name }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-job-{{ $name }}
+          command: ["/bin/sh"]
+          args: ["-c", "python -u app/manage.py run-job {{ $name }}"]
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: {{ .Values.deployment.name }}-job
+            - configMapRef:
+                name: {{ .Values.deployment.name }}-job-{{ $name }}
+          resources:
+            {{- $resources := .Values.resources.jobs }}
+            {{- if $configValues.resources }}
+              {{- $resources = $configValues.resources }}
+            {{- end }}
+            {{ toYaml $resources | nindent 12 }}
+{{- end -}}
+{{- end -}}

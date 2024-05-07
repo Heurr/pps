@@ -1,4 +1,4 @@
-from enum import StrEnum
+from enum import Enum, StrEnum
 
 
 class LogFormatType(StrEnum):
@@ -67,10 +67,25 @@ class Entity(StrEnum):
     AVAILABILITY = "availability"
 
 
+class Job(StrEnum):
+    EVENT_PROCESSING = "event-processing"
+
+
 class Action(StrEnum):
     DELETE = "delete"
     CREATE = "create"
     UPDATE = "update"
+
+
+class Aggregate(StrEnum):
+    MIN = "MIN"
+    MAX = "MAX"
+
+
+class ProcessResultType(Enum):
+    UPDATED = 1
+    DELETED = 2
+    NOT_CHANGED = 3
 
 
 PLATFORM_COUNTRY_MAP = {
@@ -86,6 +101,8 @@ COUNTRY_PLATFORM_MAP = {
 }
 
 RABBITMQ_MSG_CONTENT_TYPE_JSON = "application/json"
+PUBLISHER_REDIS_QUEUE_NAME = "price-publish"
+PROCESS_SAFE_FLAG_REDIS_QUEUE_NAME = "process-safe-flag"
 
 ENTITY_DATA_COLUMNS: dict[Entity, str] = {
     Entity.AVAILABILITY: "in_stock",

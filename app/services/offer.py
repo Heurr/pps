@@ -47,13 +47,14 @@ class OfferService(BaseEntityService[OfferDBSchema, OfferCreateSchema]):
 
             price_events += [
                 PriceEvent(
-                    product_id,
-                    price_type,
-                    action,
-                    price,
-                    country_code,
-                    currency_code,
-                    created_at,
+                    product_id=product_id,
+                    type=price_type,
+                    action=action,
+                    price=price,
+                    old_price=offer.old.price if offer.old else None,
+                    country_code=country_code,
+                    currency_code=currency_code,
+                    created_at=created_at,
                 )
                 for price_type in price_types
             ]

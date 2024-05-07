@@ -24,10 +24,17 @@ UPDATE_METRICS = Counter(
     "update_metrics", "Number of updated entities", ["update_type", "entity"]
 )
 
+JOB_METRICS = Counter(
+    "job_processed",
+    "Total number of entities processed by the job",
+    ["name", "stage"],
+)
+
+
 JOB_TIMER = Gauge(
     "job_timer",
     "Time taken to process one entity in the job",
-    ["job_name"],
+    ["name"],
 )
 
 API_METRICS = Histogram(

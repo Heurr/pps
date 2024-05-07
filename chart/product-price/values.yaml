@@ -127,6 +127,12 @@ resources:
     requests:
       cpu: 250m
       memory: 256Mi
+  jobs:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
 
 
 
@@ -194,6 +200,25 @@ autoscaling:
               - type: Percent
                 value: 10
                 periodSeconds: 30
+  job:
+    listLength: "20000"
+    enabled: true
+    pollingInterval: 30
+    minReplicaCount: 0
+    maxReplicaCount: 10
+    targetCPUUtilizationPercentage: 80
+    advanced:
+      horizontalPodAutoscalerConfig:
+        behavior:
+          scaleDown:
+            policies:
+              - type: Percent
+                value: 10
+                periodSeconds: 360 # 5 minutes
+
+jobs:
+  event-processing:
+    batchSize: 200
 
 
 entityPopulation:

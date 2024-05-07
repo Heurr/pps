@@ -8,9 +8,10 @@ import typer
 
 from alembic import command as alembic_command
 from alembic.config import Config as AlembicConfig
-from app.constants import Entity
+from app.constants import Entity, Job
 from app.consumer_app import run_entity_consumer
 from app.db import db_adapter
+from app.job_app import job_app
 from app.jobs.entity_population import EntityPopulationJob
 from app.utils.log import prepare_logging
 from app.utils.sentry import init_sentry
@@ -72,6 +73,19 @@ def run_consumer(entity: Entity):
         logger.exception("%s consumer task failed", cname, exc_info=exc)
     finally:
         logger.info("%s consumer shutdown complete", cname)
+
+
+@app.command()
+def run_job(name: Job):
+    init_sentry(server_name=name, component="job")
+    try:
+        asyncio.run(job_app(name))
+    except asyncio.CancelledError:
+        logger.info("%s job cancelled", name)
+    except Exception as exc:
+        logger.exception("%s job failed", name, exc_info=exc)
+    finally:
+        logger.info("%s job shutdown complete", name)
 
 
 @app.command()

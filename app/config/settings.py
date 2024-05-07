@@ -147,4 +147,9 @@ class EntityPopulationJobSettings(Settings):
     EXPIRE_TIME: int = 6 * 60 * 60  # 6 hours in seconds
 
 
+class JobSettings(Settings):
+    JOB_BATCH_SIZE: int = 200
+    JOB_QUEUE_POP_TIMEOUT: float = 0.2
+
+
 base_settings = Settings()
