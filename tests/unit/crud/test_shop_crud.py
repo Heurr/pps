@@ -2,7 +2,7 @@ import pytest
 
 from app import crud
 from app.schemas.shop import ShopDBSchema
-from tests.factories import shop_factory
+from tests.factories import offer_factory, shop_factory
 from tests.utils import compare, custom_uuid
 
 
@@ -71,3 +71,26 @@ async def test_delete_shops(db_conn, shops: list[ShopDBSchema]):
     shops_in_db = await crud.shop.get_many(db_conn)
     assert len(shops_in_db) == 1
     compare(shops[2], shops_in_db[0])
+
+
+@pytest.mark.anyio
+async def test_get_product_ids_in_stock(db_conn, shops: list[ShopDBSchema]):
+    offers = [
+        await offer_factory(
+            db_conn, offer_id=custom_uuid(1), shop_id=shops[0].id, in_stock=True
+        ),
+        await offer_factory(
+            db_conn, offer_id=custom_uuid(2), shop_id=shops[0].id, in_stock=True
+        ),
+        await offer_factory(
+            db_conn, offer_id=custom_uuid(3), shop_id=shops[0].id, in_stock=False
+        ),
+        await offer_factory(
+            db_conn, offer_id=custom_uuid(4), shop_id=shops[1].id, in_stock=True
+        ),
+        await offer_factory(db_conn, offer_id=custom_uuid(5), shop_id=shops[1].id),
+    ]
+    offers_in_stock = await crud.shop.get_offers_in_stock_for_shops(
+        db_conn, [s.id for s in shops]
+    )
+    assert set(offers_in_stock) == {offers[0], offers[1], offers[3]}
