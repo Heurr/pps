@@ -26,3 +26,4 @@ data:
   PPS_CONSUMER_RABBITMQ_QUEUE_POSTFIX: {{ .Values.rabbitmq.queuePostfix | quote }}
   PPS_CONSUMER_REDIS_PUSH_INTERVAL: {{ .Values.consumers.redisPushInterval | quote }}
   PPS_CONSUMER_REDIS_CAPACITY_THRESHOLD_IN_PERCENT: {{ .Values.consumers.redisCapacityThreshold | quote }}
+  PPS_SENTRY_DSN: {{ .Values.sentry.dsn | quote }}

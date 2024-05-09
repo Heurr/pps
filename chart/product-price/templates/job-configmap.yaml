@@ -18,5 +18,6 @@ data:
   PPS_REDIS_HOST: {{ .Values.redis.host | quote }}
   PPS_JOB_BATCH_SIZE: {{ $configValues.batchSize | quote }}
   PPS_JOB_QUEUE_POP_TIMEOUT: {{ $configValues.queuePopTimeout | quote }}
+  PPS_SENTRY_DSN: {{ .Values.sentry.dsn | quote }}
 {{- end -}}
 {{- end -}}

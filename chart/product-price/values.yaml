@@ -16,6 +16,9 @@ app:
   logLevel: info
   logFormat: default
 
+sentry:
+  dsn: "https://bab07baf157b4910aa45080725e9d258@sentry.heu.cz/240"
+
 postgres:
   masterHost: null
   dbName: product-price

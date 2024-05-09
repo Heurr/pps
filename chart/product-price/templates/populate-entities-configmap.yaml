@@ -25,3 +25,4 @@ data:
   PPS_REPUBLISH_TO_ROUTING_KEY_MAP: {{ .Values.entityPopulation.republishToRoutingKeyMap | toJson | squote }}
   PPS_USER_AGENT: {{ .Values.entityPopulation.userAgent | quote }}
   PPS_REPUBLISH_BATCH: {{ .Values.entityPopulation.republishBatch | quote }}
+  PPS_SENTRY_DSN: {{ .Values.sentry.dsn | quote }}

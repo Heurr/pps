@@ -19,5 +19,7 @@ data:
   PPS_WORKER_BUFFER_SIZE: {{ $configValues.bufferSize | quote }}
   PPS_WORKER_POP_TIMEOUT: {{ $configValues.popTimeout | quote }}
   PPS_WORKER_MESSAGE_LOG_INTERVAL: {{ $configValues.messageLogInterval | default "1000" | quote }}
+  PPS_SENTRY_DSN: {{ .Values.sentry.dsn | quote }}
+
 {{- end -}}
 {{- end -}}
