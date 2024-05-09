@@ -107,10 +107,10 @@ async def test_price_event_job(
     }
 
     assert await redis.scard(PUBLISHER_REDIS_QUEUE_NAME) == 2
-    assert await redis.spop(PUBLISHER_REDIS_QUEUE_NAME, 100) == [
+    assert set(await redis.spop(PUBLISHER_REDIS_QUEUE_NAME, 100)) == {
         custom_uuid(1).bytes,
         custom_uuid(3).bytes,
-    ]
+    }
 
     await push_to_redis_queue(
         entity_population_job,

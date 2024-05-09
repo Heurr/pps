@@ -69,20 +69,20 @@ async def test_upsert_many(
     redis_mock = mocker.AsyncMock()
 
     new_offers_msgs = [
-        # update
-        await offer_factory(offer_id=custom_uuid(1), price=2, version=2),
-        # not update because of old versio
+        # higher version, fields changed - should be updated
+        await offer_factory(offer_id=custom_uuid(1), price=2, version=3),
+        # old version - no update
         await offer_factory(offer_id=custom_uuid(2), price=2, version=1),
-        # not update because of the same fields
+        # higher version, same fields - no update
         OfferCreateSchema(**offers[2].model_dump(exclude={"version"}), version=3),
-        # a new offer
-        await offer_factory(offer_id=custom_uuid(4)),
+        # new offer ID - should be inserted
+        await offer_factory(offer_id=custom_uuid(5)),
     ]
 
     updated_ids = await offer_service.upsert_many(
         db_conn_mock, redis_mock, new_offers_msgs
     )
-    assert set(updated_ids) == {custom_uuid(1), custom_uuid(4)}
+    assert set(updated_ids) == {custom_uuid(1), custom_uuid(5)}
     crud_upsert_mock.assert_called_once_with(
         db_conn_mock, [new_offers_msgs[0], new_offers_msgs[3]]
     )

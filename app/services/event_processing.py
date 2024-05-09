@@ -5,10 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app import crud
 from app.constants import Aggregate, ProcessResultType, ProductPriceType
-from app.custom_types import ProcessResultDataType, ProductPriceDeletePk
+from app.custom_types import ProductPriceDeletePk
 from app.schemas.price_event import PriceChange, PriceEvent, PriceEventAction
 from app.schemas.product_price import ProductPriceCreateSchema, ProductPriceDBSchema
 from app.utils import utc_today
+
+ProcessResultDataType = PriceChange | ProductPriceDeletePk | None
 
 
 class EventProcessingService:
@@ -66,6 +68,7 @@ class EventProcessingService:
         event: PriceEvent,
         price: ProductPriceDBSchema | None,
     ) -> tuple[ProcessResultType, ProcessResultDataType]:
+        assert event.price  # UPSERT event has always price set
         if not price:
             return ProcessResultType.UPDATED, PriceChange(
                 min_price=event.price, max_price=event.price

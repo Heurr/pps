@@ -29,8 +29,8 @@ class PriceEvent(BaseModel):
     product_id: UUID
     type: ProductPriceType
     action: PriceEventAction
-    price: float
-    old_price: float | None
+    price: float | None = None
+    old_price: float | None = None
     country_code: CountryCode
     currency_code: CurrencyCode
     created_at: datetime
