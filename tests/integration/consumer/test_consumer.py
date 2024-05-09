@@ -92,6 +92,8 @@ async def test_consume_non_filtered_country(
             msg_body(entity.value, action, country=None),  # all will be processed
         )
 
+    await asyncio.sleep(0.2)
+
     await wait_for_empty_rmq_queue(rmq_channel, entity, settings, 20)
     await wait_for_redis(redis, 5)
     assert await redis.keys() == [REDIS_KEYS_MAP[entity].encode("UTF-8")]
