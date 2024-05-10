@@ -174,6 +174,15 @@ async def test_remove_many(db_conn, offers: list[OfferDBSchema]):
 
 
 @pytest.mark.anyio
+async def test_remove_many_empty(db_conn, offers: list[OfferDBSchema]):
+    deleted_ids = await crud.offer.remove_many(db_conn, [])
+    assert set(deleted_ids) == set()
+
+    offers_in_db = await crud.offer.get_many(db_conn)
+    assert len(offers_in_db) == 3
+
+
+@pytest.mark.anyio
 async def test_get_unpopulated_offers(db_conn):
     version = [(-1, -1), (-1, 0), (0, -1), (0, 0)]
     offers = [

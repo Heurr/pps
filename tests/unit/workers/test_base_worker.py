@@ -63,7 +63,7 @@ async def test_process_many_delete_messages_exception(
 
     await buyable_message_mock_worker.process_many_delete_messages(db_conn_mock, messages)
     assert caplog.records[0].levelname == "ERROR"
-    assert caplog.messages[0] == "Error in process delete buyable messages: Crud Error"
+    assert caplog.messages[0] == "Error in process delete buyable messages"
 
 
 @pytest.mark.anyio
@@ -140,7 +140,4 @@ async def test_process_many_create_update_messages_exception(
         db_conn_mock, messages
     )
     assert caplog.records[0].levelname == "ERROR"
-    assert (
-        caplog.messages[0]
-        == "Error in process many create update buyable messages: Crud Error"
-    )
+    assert caplog.messages[0] == "Error in process many create update buyable messages"

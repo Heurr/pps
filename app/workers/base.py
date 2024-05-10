@@ -274,9 +274,9 @@ class BaseMessageWorker(Generic[MessageSchemaT]):
             self.metrics.updated_entities.inc(len(upserted_ids))
         except Exception as exc:
             self._logger.error(
-                "Error in process many create update %s messages: %s",
+                "Error in process many create update %s messages",
                 self.entity.value,
-                str(exc),
+                exc_info=exc,
             )
 
     async def process_many_delete_messages(
@@ -294,9 +294,9 @@ class BaseMessageWorker(Generic[MessageSchemaT]):
             self.metrics.deleted_entities.inc(len(deleted_ids))
         except Exception as exc:
             self._logger.error(
-                "Error in process delete %s messages: %s",
+                "Error in process delete %s messages",
                 self.entity.value,
-                str(exc),
+                exc_info=exc,
             )
 
     def stop_consuming(self) -> None:

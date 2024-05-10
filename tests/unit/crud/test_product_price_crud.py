@@ -103,3 +103,13 @@ async def test_delete_product_prices(db_conn):
     product_price_db = await crud.product_price.get_many(db_conn)
     assert len(product_price_db) == 1
     assert product_price_db[0].product_id == product_prices[1].product_id
+
+
+@pytest.mark.anyio
+async def test_delete_product_prices_empty(db_conn):
+    deleted_ids = await crud.product_price.remove_many_for_all_days(db_conn, [])
+
+    assert deleted_ids == []
+
+    product_price_db = await crud.product_price.get_many(db_conn)
+    assert len(product_price_db) == 0

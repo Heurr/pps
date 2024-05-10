@@ -89,6 +89,8 @@ class CRUDProductPrice:
     async def remove_many_for_all_days(
         self, db_conn: AsyncConnection, obj_pks: list[ProductPriceDeletePk]
     ) -> list[ProductPricePk]:
+        if not obj_pks:
+            return []
         # Sort by PKs
         obj_pks.sort(key=lambda item: [item[0], item[1]])
 

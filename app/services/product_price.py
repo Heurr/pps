@@ -34,4 +34,6 @@ class ProductPriceService:
             if db_obj is None or db_obj.updated_at < new_obj.updated_at:
                 objs_to_upsert.append(new_obj)
 
+        if not objs_to_upsert:
+            return []
         return await self.crud.upsert_many(db_conn, objs_to_upsert)

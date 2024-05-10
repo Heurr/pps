@@ -54,6 +54,8 @@ class BaseEntityService(
                 objs_to_upsert.append(incoming_msg)
                 updated_entities.append(EntityUpdate(old=obj_from_db, new=incoming_msg))
 
+        if not objs_to_upsert:
+            return []
         upserted_ids = await self.crud.upsert_many(db_conn, objs_to_upsert)
         price_events = await self.generate_price_events(db_conn, updated_entities)
         await self.send_price_events(redis, price_events)
@@ -87,6 +89,8 @@ class BaseEntityService(
         redis: Redis,
         ids_versions: list[tuple[UUID, int]],
     ) -> list[UUID]:
+        if not ids_versions:
+            return []
         old_entities = await self.crud.get_in(db_conn, [idv[0] for idv in ids_versions])
         version_column = ENTITY_VERSION_COLUMNS.get(self.entity, "version")
         versions = {e.id: getattr(e, version_column) for e in old_entities}
