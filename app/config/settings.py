@@ -112,7 +112,7 @@ class ConsumerSettings(RabbitmqSettings):
     CONSUMER_RABBITMQ_CREATE_QUEUES: bool = False
     CONSUMER_RABBITMQ_ENTITIES: dict[Entity, Any] = {}
     CONSUMER_RABBITMQ_QUEUE_POSTFIX: str | None = None
-    CONSUMER_REDIS_PUSH_INTERVAL: float = 1
+    CONSUMER_MAX_DELAY: float = 1
     CONSUMER_REDIS_CAPACITY_THRESHOLD_IN_PERCENT: int = 95
     CONSUMER_ITERATOR_TIMEOUT: float = 1
 
@@ -126,11 +126,11 @@ class ConsumerSettings(RabbitmqSettings):
             "exchange", self.RABBITMQ_EXCHANGE_NAME
         )
 
-    def redis_push_interval(self, entity: Entity | None = None) -> float:
+    def rmq_max_delay(self, entity: Entity | None = None) -> float:
         if entity is None:
-            return self.CONSUMER_REDIS_PUSH_INTERVAL
+            return self.CONSUMER_MAX_DELAY
         return self.rabbitmq_entity_queue_mapping(entity).get(
-            "redisPushInterval", self.CONSUMER_REDIS_PUSH_INTERVAL
+            "maxDelay", self.CONSUMER_MAX_DELAY
         )
 
     def filtered_countries(self, entity: Entity | None) -> list[str]:

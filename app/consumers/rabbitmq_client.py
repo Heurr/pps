@@ -20,7 +20,7 @@ class RabbitmqConsumerClient(BaseRabbitmqAdapter):
             self.queue_name += f"-{settings.CONSUMER_RABBITMQ_QUEUE_POSTFIX}"
         self.create_queues = settings.CONSUMER_RABBITMQ_CREATE_QUEUES
         self.prefetch_count = settings.RABBITMQ_PREFETCH_COUNT
-        self.push_interval = settings.redis_push_interval(entity)
+        self.max_delay = settings.rmq_max_delay(entity)
         self.queue: AbstractRobustQueue
 
     async def connect(self):
@@ -54,4 +54,4 @@ class RabbitmqConsumerClient(BaseRabbitmqAdapter):
         logger.info("%s queue %s", queue_operation, self.queue_name)
 
     def iterator(self) -> AbstractQueueIterator:
-        return self.queue.iterator(timeout=self.push_interval, no_ack=True)
+        return self.queue.iterator(timeout=self.max_delay, no_ack=True)

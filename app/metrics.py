@@ -19,7 +19,6 @@ ENTITY_METRICS = Counter(
     ["entity", "phase", "operation"],
 )
 
-
 UPDATE_METRICS = Counter(
     "update_metrics", "Number of updated entities", ["update_type", "entity"]
 )

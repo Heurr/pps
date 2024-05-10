@@ -51,7 +51,7 @@ class Consumer(RabbitMQBatchConsumer):
                 super().__init__(
                     self.rmq.queue,
                     decoder=DummyDecoder(),
-                    max_delay=self.rmq.push_interval,
+                    max_delay=self.rmq.max_delay,
                     max_item_count=self.rmq.prefetch_count,
                     iterator_timeout=self.iterator_timeout,
                     iterator_timeout_sleep=0.05,
@@ -72,9 +72,6 @@ class Consumer(RabbitMQBatchConsumer):
                 type(exc),
                 str(exc),
             )
-            ENTITY_METRICS.labels(
-                entity=self.entity.value, phase="consumer", operation="discard"
-            )
         finally:
             self.logger.info(
                 "Consumer %s for queue %s stopped",
@@ -93,7 +90,7 @@ class Consumer(RabbitMQBatchConsumer):
         if messages:
             ENTITY_METRICS.labels(
                 entity=self.entity.value, phase="consumer", operation="read"
-            )
+            ).inc(len(messages))
             if not self.redis:
                 raise RuntimeError("Redis not initialized")
 
@@ -152,7 +149,7 @@ class Consumer(RabbitMQBatchConsumer):
             self.logger.error("Error while pushing messages to redis: %s", exc)
             ENTITY_METRICS.labels(
                 entity=self.entity.value, phase="consumer", operation="discard"
-            )
+            ).inc(len(msg_bodies))
 
     def stop(self, _signum=None, _frame=None) -> None:
         self.logger.info("Stopping %s consumer", self.entity.value)

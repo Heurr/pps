@@ -114,7 +114,7 @@ ENTITY_VERSION_COLUMNS: dict[Entity, str] = {
     Entity.BUYABLE: "buyable_version",
 }
 
-PRICE_EVENT_QUEUE = "price-events"
+PRICE_EVENT_QUEUE = Job.EVENT_PROCESSING.value
 
 
 PRICE_PRECISION = 12

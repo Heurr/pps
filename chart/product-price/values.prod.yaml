@@ -5,7 +5,7 @@ ingress:
   host: api.product-price.prod.heu.group
 
 postgres:
-  masterHost: 10.116.0.140  # The database instance will be created later
+  masterHost: 10.116.0.140
 
 redis:
   host: 10.116.1.4
