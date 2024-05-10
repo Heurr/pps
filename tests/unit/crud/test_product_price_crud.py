@@ -5,8 +5,8 @@ from sqlalchemy.exc import IntegrityError
 
 from app import crud
 from app.constants import ProductPriceType
-from app.custom_types import ProductPricePk
-from app.utils import utc_now
+from app.custom_types import ProductPriceDeletePk, ProductPricePk
+from app.utils import utc_now, utc_today
 from tests.factories import product_price_factory
 from tests.utils import compare, custom_uuid
 
@@ -94,8 +94,14 @@ async def test_delete_product_prices(db_conn):
         product_prices[0].price_type,
     )
 
-    deleted_ids = await crud.product_price.remove_many_for_all_days(
-        db_conn, [(product_prices[0].product_id, product_prices[0].price_type)]
+    deleted_ids = await crud.product_price.remove_many(
+        db_conn,
+        [
+            ProductPriceDeletePk(
+                product_prices[0].product_id, product_prices[0].price_type
+            )
+        ],
+        utc_today(),
     )
 
     assert deleted_ids == [offer_pk]
@@ -107,9 +113,10 @@ async def test_delete_product_prices(db_conn):
 
 @pytest.mark.anyio
 async def test_delete_product_prices_empty(db_conn):
-    deleted_ids = await crud.product_price.remove_many_for_all_days(db_conn, [])
+    await product_price_factory(db_conn)
+    deleted_ids = await crud.product_price.remove_many(db_conn, [], utc_today())
 
     assert deleted_ids == []
 
     product_price_db = await crud.product_price.get_many(db_conn)
-    assert len(product_price_db) == 0
+    assert len(product_price_db) == 1

@@ -1,4 +1,5 @@
 import logging
+from datetime import date
 
 from asyncpg.exceptions import (
     DataError,
@@ -86,17 +87,25 @@ class CRUDProductPrice:
         values = [{**e.model_dump()} for e in entities]
         return await self._do_upsert_many(db_conn, self.updatable_columns, values)
 
-    async def remove_many_for_all_days(
-        self, db_conn: AsyncConnection, obj_pks: list[ProductPriceDeletePk]
+    async def remove_many(
+        self,
+        db_conn: AsyncConnection,
+        delete_pks: list[ProductPriceDeletePk],
+        day: date,
     ) -> list[ProductPricePk]:
-        if not obj_pks:
+        if not delete_pks:
             return []
         # Sort by PKs
-        obj_pks.sort(key=lambda item: [item[0], item[1]])
+        delete_pks.sort(key=lambda item: [item.product_id, item.price_type])
+        obj_pks = [(day, pk.product_id, pk.price_type) for pk in delete_pks]
 
         stmt = (
             self.table.delete()
-            .where(tuple_(self.table.c.product_id, self.table.c.price_type).in_(obj_pks))
+            .where(
+                tuple_(
+                    self.table.c.day, self.table.c.product_id, self.table.c.price_type
+                ).in_(obj_pks)
+            )
             .returning(self.table.c.product_id, self.table.c.day, self.table.c.price_type)
         )
 

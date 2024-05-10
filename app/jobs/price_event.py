@@ -58,7 +58,7 @@ class PriceEventJob(BaseJob):
                 self.deduplicate(to_update),
                 list(product_prices.values()),
             )
-            deleted = await crud.product_price.remove_many_for_all_days(conn, to_delete)
+            deleted = await crud.product_price.remove_many(conn, to_delete, utc_today())
 
         self.logger.info("Upsert %i product prices", len(updated))
         self.logger.info("Delete %i product prices", len(deleted))
