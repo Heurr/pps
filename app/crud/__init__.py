@@ -1,6 +1,7 @@
 from ..constants import Entity
 from .availability import crud_availability as availability
 from .base import CRUDBase
+from .base_price import crud_base_price as base_price
 from .buyable import crud_buyable as buyable
 from .offer import crud_offer as offer
 from .product_price import crud_product_price as product_price
@@ -25,4 +26,5 @@ __all__ = [
     "buyable",
     "crud_from_entity",
     "product_price",
+    "base_price",
 ]

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from app import crud
 from app.constants import CountryCode, CurrencyCode, ProductPriceType
 from app.schemas.availability import AvailabilityCreateSchema
+from app.schemas.base_price import BasePriceCreateSchema, BasePriceDBSchema
 from app.schemas.buyable import BuyableCreateSchema
 from app.schemas.offer import OfferCreateSchema, OfferDBSchema
 from app.schemas.price_event import PriceEvent, PriceEventAction
@@ -172,3 +173,23 @@ async def availability_factory(
         in_stock=in_stock or random_bool(),
         version=version or random_int(),
     )
+
+
+async def base_price_factory(
+    db_conn: AsyncConnection | None = None,
+    db_schema: bool = False,
+    product_id: UUID | None = None,
+    price_type: ProductPriceType = ProductPriceType.ALL_OFFERS,
+    price: float | None = None,
+) -> BasePriceCreateSchema | BasePriceDBSchema:
+    schema = BasePriceCreateSchema(
+        product_id=product_id or random_one_id(),
+        price_type=price_type,
+        price=price or float(random_int()),
+    )
+    if db_conn:
+        return (await crud.base_price.create_many(db_conn, [schema]))[0]
+    elif db_schema:
+        return BasePriceDBSchema(**schema.model_dump())
+    else:
+        return schema

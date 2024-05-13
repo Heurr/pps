@@ -19,3 +19,8 @@ class ProductPricePk(NamedTuple):
 class ProductPriceDeletePk(NamedTuple):
     product_id: UUID
     price_type: ProductPriceType
+
+
+class BasePricePk(NamedTuple):
+    product_id: UUID
+    price_type: ProductPriceType
