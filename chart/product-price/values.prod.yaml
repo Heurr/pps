@@ -29,3 +29,5 @@ autoscaling:
     pollingInterval: 10
     minReplicaCount: 1
     maxReplicaCount: 12
+  job:
+    minReplicaCount: 1

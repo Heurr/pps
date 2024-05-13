@@ -23,9 +23,9 @@ spec:
     - type: redis
       metadata:
         port: {{ .Values.redis.port | quote }}
-        hostFromEnv: OOR_REDIS_HOST
-        passwordFromEnv: OOR_REDIS_PASSWORD
-        usernameFromEnv: OOR_REDIS_USER
+        hostFromEnv: PPS_REDIS_HOST
+        passwordFromEnv: PPS_REDIS_PASSWORD
+        usernameFromEnv: PPS_REDIS_USER
         listName: set-{{ $name }}
         listLength: {{ toString ($configValues.autoscalingListLength | default .Values.autoscaling.job.listLength) | quote }}
     - type: cpu
