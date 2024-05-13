@@ -164,7 +164,7 @@ readinessProbe:
 autoscaling:
   api:
     enabled: true
-    minReplicas: 0
+    minReplicas: 1
     maxReplicas: 3
     targetCPUUtilizationPercentage: 80
   consumer:
