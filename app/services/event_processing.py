@@ -1,3 +1,4 @@
+import logging
 from typing import cast
 from uuid import UUID
 
@@ -14,6 +15,9 @@ ProcessResultDataType = PriceChange | ProductPriceDeletePk | None
 
 
 class EventProcessingService:
+    def __init__(self):
+        self.logger = logging.getLogger(self.__class__.__name__)
+
     async def process_events_bulk(
         self,
         db_conn: AsyncConnection,
@@ -51,19 +55,18 @@ class EventProcessingService:
                 db_conn, event, price
             )
 
-        if result_type in [ProcessResultType.NOT_CHANGED, ProcessResultType.DELETED]:
-            return result_type, result_data  # type: ignore[return-value]
+        if result_type == ProcessResultType.UPDATED:
+            return ProcessResultType.UPDATED, ProductPriceCreateSchema(
+                day=utc_today(),
+                price_type=event.type,
+                updated_at=event.created_at,
+                **event.model_dump(),
+                **cast(PriceChange, result_data).model_dump(),
+            )
+        return result_type, result_data  # type: ignore[return-value]
 
-        return ProcessResultType.UPDATED, ProductPriceCreateSchema(
-            day=utc_today(),
-            price_type=event.type,
-            updated_at=event.created_at,
-            **event.model_dump(),
-            **cast(PriceChange, result_data).model_dump(),
-        )
-
-    @staticmethod
     async def _process_upsert_event(
+        self,
         db_conn: AsyncConnection,
         event: PriceEvent,
         price: ProductPriceDBSchema | None,
@@ -91,9 +94,19 @@ class EventProcessingService:
         elif event.price > price.max_price:
             max_price = event.price
 
-        # On upsert crud can't return None on aggregate function
-        assert max_price
-        assert min_price
+        if min_price is None or max_price is None:
+            extra = {
+                "event": event,
+                "price": price,
+                "min_price": min_price,
+                "max_price": max_price,
+            }
+            self.logger.info("%s", extra)
+            self.logger.error(
+                "Invalid None value for min max price in process_upsert_event",
+                extra=extra,
+            )
+            return ProcessResultType.INVALID, None
 
         if max_price == price.max_price and min_price == price.min_price:
             return ProcessResultType.NOT_CHANGED, None

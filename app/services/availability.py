@@ -43,12 +43,12 @@ class AvailabilityService(
                         product_id=offer.old.product_id,
                         type=type_,
                         action=action,
-                        price=offer.old.price
-                        if action == PriceEventAction.UPSERT
-                        else None,
-                        old_price=offer.old.price
-                        if action == PriceEventAction.DELETE
-                        else None,
+                        price=(
+                            offer.old.price if action == PriceEventAction.UPSERT else None
+                        ),
+                        old_price=(
+                            offer.old.price if action == PriceEventAction.DELETE else None
+                        ),
                         country_code=offer.old.country_code,
                         currency_code=offer.old.currency_code,
                         created_at=created_at,
