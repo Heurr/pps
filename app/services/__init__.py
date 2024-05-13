@@ -23,4 +23,7 @@ def service_from_entity(entity: Entity) -> BaseEntityService:
 __all__ = [
     "service_from_entity",
     "OfferService",
+    "ShopService",
+    "BuyableService",
+    "AvailabilityService",
 ]

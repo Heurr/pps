@@ -5,12 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app import crud
 from app.constants import CountryCode, CurrencyCode, ProductPriceType
+from app.schemas.availability import AvailabilityCreateSchema
+from app.schemas.buyable import BuyableCreateSchema
 from app.schemas.offer import OfferCreateSchema, OfferDBSchema
 from app.schemas.price_event import PriceEvent, PriceEventAction
 from app.schemas.product_price import ProductPriceCreateSchema, ProductPriceDBSchema
 from app.schemas.shop import ShopCreateSchema, ShopDBSchema
 from app.utils import utc_now
 from tests.utils import (
+    random_bool,
     random_country_code,
     random_currency_code,
     random_int,
@@ -139,4 +142,33 @@ def price_event_factory(
         created_at=created_at or utc_now(),
         country_code=country_code or random_country_code(),
         currency_code=currency_code or random_currency_code(),
+    )
+
+
+async def buyable_factory(
+    buyable_id: UUID | None = None,
+    buyable: bool | None = None,
+    version: int | None = None,
+    country_code: CountryCode | None = None,
+) -> BuyableCreateSchema:
+    return BuyableCreateSchema(
+        id=buyable_id or random_one_id(),
+        country_code=country_code or random_country_code(),
+        buyable=buyable or random_bool(),
+        version=version or random_int(),
+    )
+
+
+async def availability_factory(
+    create: bool = True,
+    availability_id: UUID | None = None,
+    in_stock: bool | None = None,
+    country_code: CountryCode | None = None,
+    version: int | None = None,
+) -> AvailabilityCreateSchema:
+    return AvailabilityCreateSchema(
+        id=availability_id or random_one_id(),
+        country_code=country_code or random_country_code(),
+        in_stock=in_stock or random_bool(),
+        version=version or random_int(),
     )

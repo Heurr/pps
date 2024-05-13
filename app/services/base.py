@@ -68,19 +68,23 @@ class BaseEntityService(
             return True
 
         is_newer = msg_in >= obj_in
+
         if is_newer:
             UPDATE_METRICS.labels(update_type="forced", entity=self.entity.value).inc()
             if self.force_entity_update:
-                return is_newer
+                return True
 
         compared_fields = obj_in.model_fields.keys() & msg_in.model_fields.keys() - {
             "version"
         }
+
         _should_be_updated = is_newer and obj_in.model_dump(
             include=compared_fields
         ) != msg_in.model_dump(include=compared_fields)
+
         if _should_be_updated:
             UPDATE_METRICS.labels(update_type="standard", entity=self.entity.value).inc()
+
         return _should_be_updated
 
     async def remove_many(

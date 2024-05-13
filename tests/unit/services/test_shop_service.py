@@ -2,7 +2,7 @@ import pytest
 
 from app import crud
 from app.constants import CountryCode
-from app.schemas.shop import ShopDBSchema
+from app.schemas.shop import ShopCreateSchema, ShopDBSchema
 from tests.factories import shop_factory
 from tests.utils import custom_uuid
 
@@ -81,3 +81,34 @@ async def test_remove_many(shop_service, shops: list[ShopDBSchema], mocker):
     deleted_ids = await shop_service.remove_many(db_conn_mock, redis_mock, to_delete)
     assert deleted_ids == [custom_uuid(2)]
     crud_delete_mock.assert_called_once_with(db_conn_mock, [(custom_uuid(2), 3)])
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "column, old_value_in_db, new_value_in_msg",
+    [
+        ("country_code", CountryCode.CZ, CountryCode.BA),
+        ("paying", True, False),
+        ("certified", True, False),
+        ("verified", True, False),
+        ("enabled", True, False),
+    ],
+)
+async def test_shop_should_be_updated_with_newer_object(
+    column, old_value_in_db, new_value_in_msg, shop_service
+):
+    # obj in DB and incoming msg have all values equal except one column
+    obj_in = await shop_factory(db_schema=True)
+    msg_in = ShopCreateSchema(**obj_in.model_dump())
+    setattr(obj_in, column, old_value_in_db)
+    setattr(msg_in, column, new_value_in_msg)
+
+    # check the object in DB should be updated with the incoming msg
+    assert shop_service.should_be_updated(obj_in, msg_in) is True
+
+    # but if the version of incoming msg is lower than version in DB
+    obj_in.version = 10
+    msg_in.version = 9
+
+    # the object in DB should not be updated with that incoming msg
+    assert shop_service.should_be_updated(obj_in, msg_in) is False

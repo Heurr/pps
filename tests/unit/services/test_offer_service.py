@@ -2,7 +2,7 @@ import pytest
 from freezegun import freeze_time
 
 from app import crud
-from app.constants import ProductPriceType
+from app.constants import CountryCode, CurrencyCode, ProductPriceType
 from app.schemas.offer import OfferCreateSchema, OfferDBSchema
 from app.schemas.price_event import PriceEventAction
 from app.services import OfferService
@@ -244,3 +244,38 @@ async def test_generate_price_event_delete(
 
     # fifth message - no event generated because of old version
     # sixth message - no event generated because of nonexistent offer
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "column, old_value_in_db, new_value_in_msg",
+    [
+        ("country_code", CountryCode.CZ, CountryCode.BA),
+        ("currency_code", CurrencyCode.CZK, CurrencyCode.EUR),
+        ("buyable_version", 1, 2),
+        ("availability_version", 1, 2),
+        ("product_id", custom_uuid(1), custom_uuid(2)),
+        ("shop_id", custom_uuid(1), custom_uuid(2)),
+        ("price", 10, 11),
+        ("in_stock", True, False),
+        ("buyable", True, False),
+    ],
+)
+async def test_offer_should_be_updated_with_newer_object(
+    column, old_value_in_db, new_value_in_msg, offer_service
+):
+    # obj in DB and incoming msg have all values equal except one column
+    obj_in = await offer_factory(db_schema=True)
+    msg_in = OfferCreateSchema(**obj_in.model_dump())
+    setattr(obj_in, column, old_value_in_db)
+    setattr(msg_in, column, new_value_in_msg)
+
+    # check the object in DB should be updated with the incoming msg
+    assert offer_service.should_be_updated(obj_in, msg_in) is True
+
+    # but if the version of incoming msg is lower than version in DB
+    obj_in.version = 10
+    msg_in.version = 9
+
+    # the object in DB should not be updated with that incoming msg
+    assert offer_service.should_be_updated(obj_in, msg_in) is False
