@@ -24,7 +24,7 @@ def get_platform_for_country(country_code: CountryCode) -> PlatformCode:
     return COUNTRY_PLATFORM_MAP[country_code]
 
 
-def dump_to_json(obj: Any) -> str:
+def dump_to_json_bytes(obj: Any) -> bytes:
     def default(obj_: Any):
         if isinstance(obj_, (UUID, dt.datetime)):
             return str(obj_)
@@ -32,4 +32,8 @@ def dump_to_json(obj: Any) -> str:
             return obj_.model_dump()
         raise TypeError
 
-    return orjson.dumps(obj, default=default).decode("utf-8")
+    return orjson.dumps(obj, default=default)
+
+
+def dump_to_json(obj: Any) -> str:
+    return dump_to_json_bytes(obj).decode("utf-8")

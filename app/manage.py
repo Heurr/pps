@@ -8,12 +8,16 @@ import typer
 
 from alembic import command as alembic_command
 from alembic.config import Config as AlembicConfig
-from app.constants import Entity, Job
+from app.config.settings import JobSettings, WorkerSetting
+from app.constants import PRICE_EVENT_QUEUE, Entity, Job
 from app.consumer_app import run_entity_consumer
 from app.db import db_adapter
 from app.job_app import job_app
 from app.jobs.entity_population import EntityPopulationJob
+from app.jobs.price_to_rabbit import PriceToRabbitEventJob
 from app.utils.log import prepare_logging
+from app.utils.product_price_entity_client import ProductPriceEntityClient
+from app.utils.redis_adapter import RedisAdapter
 from app.utils.sentry import init_sentry
 from app.worker_app import run_message_worker
 
@@ -106,6 +110,31 @@ def entity_population_job(entities: list[Entity]):
     logger.info("Sleeping for %s seconds to let metrics be scraped", sleep_duration)
     sleep(sleep_duration)
     logger.info("Entity population job finished")
+
+
+@app.command()
+def entity_to_rabbit_job():
+    logger.info("Starting entity population job")
+
+    init_sentry(server_name="product-price-rabbit", component="job")
+
+    async def run_entity_to_rabbit_job():
+        try:
+            worker_settings = WorkerSetting()
+            job_settings = JobSettings()
+            async with (
+                db_adapter as db_engine,
+                RedisAdapter(worker_settings.redis_dsn) as redis,
+                ProductPriceEntityClient() as rmq,
+            ):
+                job = PriceToRabbitEventJob(
+                    PRICE_EVENT_QUEUE, db_engine, redis, rmq, job_settings
+                )
+                await job.run()
+        except Exception as exc:
+            logger.exception("Entity population job failed", exc_info=exc)
+
+    asyncio.run(run_entity_to_rabbit_job())
 
 
 if __name__ == "__main__":

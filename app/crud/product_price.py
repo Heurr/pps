@@ -1,5 +1,6 @@
 import logging
 from datetime import date
+from uuid import UUID
 
 from asyncpg.exceptions import (
     DataError,
@@ -37,6 +38,15 @@ class CRUDProductPrice:
             tuple_(
                 self.table.c.day, self.table.c.product_id, self.table.c.price_type
             ).in_(obj_pks)
+        )
+        rows = await db_conn.execute(stmt)
+        return [self.db_scheme.model_validate(row) for row in rows]
+
+    async def get_by_product_id_and_day(
+        self, db_conn: AsyncConnection, day: date, product_ids: list[UUID]
+    ) -> list[ProductPriceDBSchema]:
+        stmt = self.table.select().where(
+            self.table.c.day == day, self.table.c.product_id.in_(product_ids)
         )
         rows = await db_conn.execute(stmt)
         return [self.db_scheme.model_validate(row) for row in rows]

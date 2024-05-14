@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel as _BaseModel
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 
 from app.constants import Action, CountryCode
 from app.exceptions import PriceServiceError
@@ -51,6 +51,20 @@ class BaseDBSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
 
 
+class BaseRMQHeaders(BaseModel):
+    user_agent: str = Field(alias="user-agent")
+    content_type: str = Field(alias="content-type")
+    hg_message_id: str = Field(
+        alias="hg-message-id", default_factory=lambda: str(uuid4())
+    )
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class MessageModel(BaseModel):
     action: Action
     version: int
+
+
+class EntityHeaders(BaseRMQHeaders):
+    pass

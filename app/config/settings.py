@@ -107,6 +107,12 @@ class RepublishSettings(RabbitmqSettings):
     REPUBLISH_BATCH: int = 1000
 
 
+class ProductPricePublishSettings(RabbitmqSettings):
+    ROUTING_KEY: str = "op-product-price.v1.update"
+    USER_AGENT: str = "Product Price Service Entity Publisher"
+    CONTENT_TYPE: str = "application/json"
+
+
 class ConsumerSettings(RabbitmqSettings):
     CONSUMER_RABBITMQ_QUEUE_MAPPING: dict[Entity, dict] = {}
     CONSUMER_RABBITMQ_CREATE_QUEUES: bool = False
