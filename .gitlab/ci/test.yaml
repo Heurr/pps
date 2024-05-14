@@ -52,6 +52,10 @@ test:
     PPS_REPLY_TO_ROUTING_KEY: "op-product-price.republish-info"
     PPS_REPUBLISH_TO_ROUTING_KEY_MAP: '{"availability":"availability.v2.create.pps","buyable":"om-buyable.v1.update.pps"}'
     PPS_USER_AGENT: "Product Price Service Republisher"
+
+    PPS_HISTORY_INTERVAL_IN_DAYS: "35"
+    PPS_PARTITIONS_AHEAD: "2"
+    PPS_PARTITIONS_FILL_FACTOR: "10"
   needs:
     - build-dev
   script:

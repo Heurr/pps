@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+import freezegun
 import pytest
 from sqlalchemy.exc import IntegrityError
 
@@ -120,3 +121,46 @@ async def test_delete_product_prices_empty(db_conn):
 
     product_price_db = await crud.product_price.get_many(db_conn)
     assert len(product_price_db) == 1
+
+
+async def test_remove_history(db_conn):
+    # We can't create in the past because partition tables are only created
+    # for the future
+    # Delete this
+    await product_price_factory(db_conn, product_id=custom_uuid(1))
+    # Don't delete since its yesterdays data
+    with freezegun.freeze_time(utc_now() + timedelta(days=1)):
+        await product_price_factory(db_conn, product_id=custom_uuid(2))
+    # Don't delete since its today data
+    with freezegun.freeze_time(utc_now() + timedelta(days=2)):
+        await product_price_factory(db_conn, product_id=custom_uuid(3))
+
+        await crud.product_price.remove_history(
+            # Keep 1 days history, that means keeping today and yesterday, delete rest
+            db_conn,
+            utc_now() - timedelta(days=1),
+        )
+
+    product_prices = await crud.product_price.get_many(db_conn)
+    assert len(product_prices) == 2
+
+
+@pytest.mark.anyio
+async def test_duplicate_day(db_conn):
+    await product_price_factory(db_conn, product_id=custom_uuid(1))
+    await product_price_factory(
+        db_conn, product_id=custom_uuid(2), day=utc_today() + timedelta(days=1)
+    )
+
+    await crud.product_price.duplicate_day(db_conn, utc_now().date())
+
+    product_prices = await crud.product_price.get_many(db_conn)
+    assert len(product_prices) == 3
+    product_prices_map = {
+        (price.product_id, price.day): price for price in product_prices
+    }
+    compare(
+        product_prices_map[(custom_uuid(1), utc_today())],
+        product_prices_map[(custom_uuid(1), utc_today() + timedelta(days=1))],
+        ignore_keys=["day"],
+    )

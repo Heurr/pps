@@ -124,13 +124,13 @@ resources:
     requests:
       cpu: 250m
       memory: 256Mi
-  populateEntities:
+  jobs:
     limits:
       memory: 512Mi
     requests:
       cpu: 250m
       memory: 256Mi
-  jobs:
+  cronJobs:
     limits:
       memory: 512Mi
     requests:
@@ -224,6 +224,13 @@ jobs:
     batchSize: 200
     queuePopTimeout: 0.2
 
+cronJobs:
+  populate-entities:
+    schedule: "00 */4 * * *" # Every 4 hours at 00
+    args: "entity-population-job availability buyable"
+  maintenance:
+    schedule: "02 00 * * *" # Every day at 00:02
+    args: "maintenance-job"
 
 entityPopulation:
   targetRoutingKeyMap:
@@ -235,6 +242,11 @@ entityPopulation:
     availability: "availability.v2.create.pps"
   userAgent: "Product Price Service Republisher"
   republishBatch: 1000
+
+maintenance:
+  historyInterval: 35
+  partitionsAhead: 2
+  partitionsFillFactor: 70
 
 nodeSelector: { }
 

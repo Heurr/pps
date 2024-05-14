@@ -1,3 +1,4 @@
+import datetime
 import logging
 from datetime import date
 from uuid import UUID
@@ -7,13 +8,14 @@ from asyncpg.exceptions import (
     InterfaceError,
     TransactionRollbackError,
 )
-from sqlalchemy import Table, tuple_
+from sqlalchemy import Table, text, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.custom_types import ProductPriceDeletePk, ProductPricePk
 from app.db.tables.product_price import product_price_table
 from app.schemas.product_price import ProductPriceCreateSchema, ProductPriceDBSchema
+from app.utils.pg_partitions import get_product_price_partition_name
 from app.utils.sentry import set_sentry_context
 
 
@@ -94,6 +96,8 @@ class CRUDProductPrice:
         db_conn: AsyncConnection,
         entities: list[ProductPriceCreateSchema],
     ) -> list[ProductPricePk]:
+        # We don't update created_at because it doesn't exist
+        # We don't update updated_at because we generate it from events
         values = [{**e.model_dump()} for e in entities]
         return await self._do_upsert_many(db_conn, self.updatable_columns, values)
 
@@ -122,6 +126,37 @@ class CRUDProductPrice:
         res = await db_conn.execute(stmt)
         deleted_ids = [ProductPricePk(r.day, r.product_id, r.price_type) for r in res]
         return deleted_ids
+
+    @staticmethod
+    async def remove_history(db_conn: AsyncConnection, day: datetime.date) -> None:
+        stmt = text(
+            f"""
+            DROP TABLE {get_product_price_partition_name(day)}
+            """
+        )
+        await db_conn.execute(stmt)
+
+    @staticmethod
+    async def duplicate_day(db_conn: AsyncConnection, day: datetime.date) -> None:
+        stmt = text(
+            """
+            INSERT INTO product_prices
+            SELECT
+              :new_day AS day,
+              product_id,
+              country_code,
+              price_type,
+              min_price,
+              max_price,
+              currency_code,
+              updated_at
+            FROM product_prices
+            WHERE day = :day
+            ON CONFLICT DO NOTHING
+            """
+        ).bindparams(day=day, new_day=day + datetime.timedelta(days=1))
+
+        await db_conn.execute(stmt)
 
 
 crud_product_price = CRUDProductPrice(table=product_price_table)

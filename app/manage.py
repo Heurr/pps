@@ -14,6 +14,7 @@ from app.consumer_app import run_entity_consumer
 from app.db import db_adapter
 from app.job_app import job_app
 from app.jobs.entity_population import EntityPopulationJob
+from app.jobs.maintenance import MaintenanceJob
 from app.jobs.price_to_rabbit import PriceToRabbitEventJob
 from app.utils.log import prepare_logging
 from app.utils.product_price_entity_client import ProductPriceEntityClient
@@ -128,13 +129,36 @@ def entity_to_rabbit_job():
                 ProductPriceEntityClient() as rmq,
             ):
                 job = PriceToRabbitEventJob(
-                    PRICE_EVENT_QUEUE, db_engine, redis, rmq, job_settings
+                    PRICE_EVENT_QUEUE.value, db_engine, redis, rmq, job_settings
                 )
                 await job.run()
         except Exception as exc:
             logger.exception("Entity population job failed", exc_info=exc)
 
     asyncio.run(run_entity_to_rabbit_job())
+
+
+def maintenance_job():
+    logger.info("Starting maintenance job")
+
+    init_sentry(server_name="maintenance-job", component="job")
+
+    async def run_maintenance_job():
+        try:
+            async with db_adapter as db_engine:
+                job = MaintenanceJob(
+                    db_engine,
+                )
+                await job.run()
+        except Exception as exc:
+            logger.exception("Maintenance job failed", exc_info=exc)
+
+    asyncio.run(run_maintenance_job())
+
+    sleep_duration = 60
+    logger.info("Sleeping for %s seconds to let metrics be scraped", sleep_duration)
+    sleep(sleep_duration)
+    logger.info("Maintenance job finished")
 
 
 if __name__ == "__main__":

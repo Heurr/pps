@@ -1,0 +1,51 @@
+{{- range $name, $configValues := .Values.cronJobs -}}
+{{- with $ }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Values.deployment.name }}-{{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "product-price.labels" . | nindent 4 }} {{ $name }}
+spec:
+  schedule: {{ $configValues.schedule }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 30
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          name: {{ .Values.deployment.name }}-{{ $name }}
+          labels:
+            {{- include "product-price.labels" . | nindent 12 }} {{ $name }}
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: {{ .Chart.Name }}-{{ $name }}
+              securityContext:
+              {{- toYaml .Values.securityContext | nindent 16 }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              command: [ "/bin/sh" ]
+              args: [ "-c", "python app/manage.py {{ $configValues.args }}" ]
+              envFrom:
+                - secretRef:
+                    name: {{ .Values.deployment.name }}-cronjob
+                - configMapRef:
+                    name: {{ .Values.deployment.name }}-{{ $name }}
+              resources:
+                {{- $resources := .Values.resources.cronJobs }}
+                {{- if $configValues.resources }}
+                  {{- $resources = $configValues.resources }}
+                {{- end }}
+                {{ toYaml $resources | nindent 16 }}
+              ports:
+                - name: metrics
+                  containerPort: {{ .Values.metrics.port }}
+                  protocol: TCP
+{{- end -}}
+{{- end -}}

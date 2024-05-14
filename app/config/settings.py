@@ -153,6 +153,12 @@ class EntityPopulationJobSettings(Settings):
     EXPIRE_TIME: int = 6 * 60 * 60  # 6 hours in seconds
 
 
+class MaintenanceJobSettings(Settings):
+    HISTORY_INTERVAL_IN_DAYS: int
+    PARTITIONS_AHEAD: int
+    PARTITIONS_FILL_FACTOR: int
+
+
 class JobSettings(Settings):
     JOB_BATCH_SIZE: int = 200
     JOB_QUEUE_POP_TIMEOUT: float = 0.2

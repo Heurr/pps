@@ -2,7 +2,7 @@ import logging
 import re
 
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 
 from app.utils import dump_to_json
 
@@ -79,3 +79,7 @@ async def truncate_db(engine: AsyncEngine) -> None:
 
             stmt = sa.text(f"TRUNCATE {table.name} RESTART IDENTITY CASCADE")
             await db_conn.execute(stmt)
+
+
+async def get_table_names(db_conn: AsyncConnection) -> list[str]:
+    return [table.name for table in await db_conn.execute(get_all_table_names_select())]

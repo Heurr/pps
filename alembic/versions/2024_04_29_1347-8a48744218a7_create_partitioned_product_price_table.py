@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql as sa_pg
 
 from alembic import op
-from app.utils.pg_partitions import create_product_prices_part_tables_for_day
+from app.utils.pg_partitions import sync_create_product_prices_part_tables_for_day
 
 # revision identifiers, used by Alembic.
 revision = "8a48744218a7"
@@ -67,7 +67,7 @@ def upgrade() -> None:
 
     day = dt.date.today()
     for _ in range(20):
-        create_product_prices_part_tables_for_day(conn, day, 10)
+        sync_create_product_prices_part_tables_for_day(conn, day, 10)
         day += dt.timedelta(days=1)
 
 
