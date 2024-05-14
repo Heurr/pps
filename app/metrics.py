@@ -65,10 +65,10 @@ DB_CONNECTIONS = Gauge(
     ["state"],
 )
 
-UNPOPULATED_ENTITIES = Counter(
-    "unpopulated_entities",
-    "Number of unpopulated entities requested for population",
-    ["entity"],
+POPULATION_JOB = Counter(
+    "population_job",
+    "Population job metrics",
+    ["entity", "status"],
 )
 
 

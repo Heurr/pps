@@ -28,7 +28,8 @@ async def entity_population_job_mock(
     )
     get_db_mock = mocker.patch.object(job, "get_db_conn")
     get_db_mock.return_value.__aenter__ = AsyncMock()
-    get_db_mock.return_value.__aexit__ = AsyncMock()
+    get_db_mock = mocker.patch.object(job, "get_db_conn_auto_commit")
+    get_db_mock.return_value.__aenter__ = AsyncMock()
 
     return job
 
@@ -42,8 +43,8 @@ async def test_process(entity_population_job_mock: EntityPopulationJob, mocker):
     mock_crud = mocker.patch(
         "app.jobs.entity_population.crud.offer.set_offers_as_populated"
     )
-    dates = [utc_now() - timedelta(hours=7), utc_now(), utc_now()]
-    versions = [(-1, None), (0, -1), (-1, -1)]
+    dates = [utc_now() - timedelta(hours=7), utc_now(), utc_now(), utc_now()]
+    versions = [(-1, None), (0, -1), (-1, -1), (1, 1)]
     objects = [
         PopulationOfferSchema(
             id=custom_uuid(i),
@@ -55,11 +56,11 @@ async def test_process(entity_population_job_mock: EntityPopulationJob, mocker):
         for i, date, version in zip(range(len(dates)), dates, versions)
     ]
     with freeze_time(utc_now()):
-        result = await entity_population_job_mock.process(AsyncMock(), objects)
+        result = await entity_population_job_mock.process(objects)
 
     assert result == {
-        Entity.BUYABLE: [objects[1].id, objects[2].id],
-        Entity.AVAILABILITY: [objects[2].id],
+        Entity.BUYABLE: {objects[1].id, objects[2].id},
+        Entity.AVAILABILITY: {objects[2].id, objects[0].id},
     }
     mock_crud.assert_called_once()
     assert mock_crud.call_args.args[1] == [Entity.BUYABLE, Entity.AVAILABILITY]
@@ -87,7 +88,7 @@ async def test_run(entity_population_job_mock: EntityPopulationJob, mocker: Mock
             yield objects[i : i + batch]
 
     async def process_side_effect(*args, **kwargs):
-        objects = args[1]
+        objects = args[0]
         return {
             Entity.AVAILABILITY: [objects[0].id, objects[1].id],
             Entity.BUYABLE: [objects[2].id],

@@ -1,10 +1,17 @@
+import json
+from contextlib import asynccontextmanager
+from datetime import timedelta
+
+import freezegun
 import pytest
 from aio_pika.abc import AbstractIncomingMessage, AbstractQueue
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
+from app import crud
 from app.config.settings import EntityPopulationJobSettings, RepublishSettings
 from app.constants import Entity
 from app.jobs.entity_population import EntityPopulationJob
+from app.utils import utc_now
 from tests.factories import offer_factory
 from tests.utils import custom_uuid, override_obj_get_db_conn
 
@@ -23,6 +30,12 @@ async def entity_population_job(
         republish_settings,
     )
     override_obj_get_db_conn(db_conn, job)
+
+    @asynccontextmanager
+    async def get_db_conn():
+        yield db_conn
+
+    job.get_db_conn_auto_commit = get_db_conn
     return job
 
 
@@ -86,3 +99,59 @@ async def test_missing_entities_job(
     assert str(offers[0].id) in msgs_by_routing_key["availability.v1.republish"].decode(
         "utf-8"
     )
+
+
+@pytest.mark.anyio
+async def test_missing_entities_job_expire_entities(
+    rmq_exchange,
+    rmq_channel,
+    rmq_queue,
+    entity_population_job: EntityPopulationJob,
+    db_conn: AsyncConnection,
+    caplog,
+):
+    """
+    Integration test for the EntityPopulationJob class, testing if newly created offers
+    which expire are correctly marked as expired
+    """
+    version = [(-1, -1), (-1, 0), (0, -1), (0, 0)]
+    offers = [
+        await offer_factory(
+            db_conn,
+            availability_version=versions[0],
+            buyable_version=versions[1],
+            offer_id=custom_uuid(i + 1),
+        )
+        for i, versions in enumerate(version)
+    ]
+    entity_population_job.expire_time = 1
+
+    with freezegun.freeze_time(utc_now() + timedelta(seconds=2)):
+        await entity_population_job.run()
+
+    assert caplog.messages[-7] == "Expired 3 offers"
+    assert "Pushed 2 ids for republish to om-buyable.v1.republish" in caplog.messages
+    assert "Pushed 2 ids for republish to availability.v1.republish" in caplog.messages
+
+    offers_in_db = {o.id: o for o in await crud.offer.get_many(db_conn)}
+    for offer in offers:
+        assert offers_in_db[offer.id].buyable_version == 0
+        assert offers_in_db[offer.id].availability_version == 0
+
+    # Read all msgs from queue
+    msgs: list[AbstractIncomingMessage] = []
+    async with rmq_queue.iterator(timeout=1) as queue_iterator:
+        async for msg in queue_iterator:
+            msgs.append(msg)
+            if len(msgs) == 2:
+                break
+
+    msgs_by_routing_key = {msg.routing_key: msg.body for msg in msgs}
+    buyable_ids = json.loads(
+        msgs_by_routing_key["om-buyable.v1.republish"].decode("utf-8")
+    )["ids"]
+    availability_ids = json.loads(
+        msgs_by_routing_key["availability.v1.republish"].decode("utf-8")
+    )["ids"]
+    assert set(buyable_ids) == {str(offers[0].id), str(offers[2].id)}
+    assert set(availability_ids) == {str(offers[1].id), str(offers[0].id)}

@@ -2,6 +2,7 @@ import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import timedelta
+from typing import Any, AsyncGenerator
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
@@ -10,7 +11,7 @@ from app import crud
 from app.config.settings import EntityPopulationJobSettings, RepublishSettings
 from app.constants import ENTITY_VERSION_COLUMNS, Entity
 from app.custom_types import OfferPk
-from app.metrics import UNPOPULATED_ENTITIES
+from app.metrics import POPULATION_JOB
 from app.republish.republish_client import RabbitmqRepublishClient
 from app.schemas.offer import PopulationOfferSchema
 from app.utils import utc_now
@@ -33,8 +34,14 @@ class EntityPopulationJob:
         self.logger = logging.getLogger(__name__)
 
     @asynccontextmanager
-    async def get_db_conn(self):
+    async def get_db_conn(self) -> AsyncGenerator[AsyncConnection, Any]:
         async with self.db_engine.begin() as conn:
+            yield conn
+
+    @asynccontextmanager
+    async def get_db_conn_auto_commit(self) -> AsyncGenerator[AsyncConnection, Any]:
+        async with self.db_engine.connect() as conn:
+            await conn.execution_options(isolation_level="AUTOCOMMIT")
             yield conn
 
     async def run(self):
@@ -47,16 +54,18 @@ class EntityPopulationJob:
         async with self.get_db_conn() as conn:
             async for batch in crud.offer.get_unpopulated_offers(conn, self.batch_size):
                 self.logger.info("Processing batch of %d offers", len(batch))
-                for entity, ids in (await self.process(conn, batch)).items():
+                for entity, ids in (await self.process(batch)).items():
                     missing_ids[entity].extend(ids)
         for entity, ids in missing_ids.items():
             async with RabbitmqRepublishClient(entity, self.republish_settings) as rmq:
-                UNPOPULATED_ENTITIES.labels(entity=entity.value).inc(len(ids))
+                POPULATION_JOB.labels(entity=entity.value, status="republish").inc(
+                    len(ids)
+                )
                 await rmq.republish_ids(ids)
 
     async def process(
-        self, db_conn: AsyncConnection, batch: list[PopulationOfferSchema]
-    ) -> dict[Entity, list[UUID]]:
+        self, batch: list[PopulationOfferSchema]
+    ) -> dict[Entity, set[UUID]]:
         """
         Process a batch of offers. It checks if the offers are expired, if
         they are expired, it marks them as populated. If they are not expired,
@@ -64,15 +73,25 @@ class EntityPopulationJob:
         """
         expire_threshold = utc_now() - timedelta(seconds=self.expire_time)
         expired_pks = []
-        unpopulated_ids = defaultdict(list)
+        unpopulated_ids = defaultdict(set)
         for offer in batch:
-            if offer.created_at < expire_threshold:
-                expired_pks.append(OfferPk(offer.product_id, offer.id))
-                continue
+            # Also add expired ids to unpopulated offers at least once
+            # before expiring
             for entity in self.entities:
                 if getattr(offer, ENTITY_VERSION_COLUMNS[entity]) == -1:
-                    unpopulated_ids[entity].append(offer.id)
+                    unpopulated_ids[entity].add(offer.id)
+            if offer.created_at < expire_threshold:
+                expired_pks.append(OfferPk(offer.product_id, offer.id))
 
-        await crud.offer.set_offers_as_populated(db_conn, self.entities, expired_pks)
+        if expired_pks:
+            await self.expire_offers(expired_pks)
         self.logger.info("Expired %d offers", len(expired_pks))
         return unpopulated_ids
+
+    async def expire_offers(self, expired_pks):
+        """
+        Use autocommit connection to avoid deadlocks when marking offers as populated
+        """
+        POPULATION_JOB.labels(entity="all", status="expire").inc(len(expired_pks))
+        async with self.get_db_conn_auto_commit() as conn:
+            await crud.offer.set_offers_as_populated(conn, self.entities, expired_pks)
