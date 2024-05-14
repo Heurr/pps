@@ -138,6 +138,7 @@ def entity_to_rabbit_job():
     asyncio.run(run_entity_to_rabbit_job())
 
 
+@app.command()
 def maintenance_job():
     logger.info("Starting maintenance job")
 
