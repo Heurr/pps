@@ -92,7 +92,7 @@ async def test_consume_non_filtered_country(
             msg_body(entity.value, action, country=None),  # all will be processed
         )
 
-    await asyncio.sleep(0.2)
+    await asyncio.sleep(0.4)
 
     await wait_for_empty_rmq_queue(rmq_channel, entity, settings, 20)
     await wait_for_redis(redis, 5)
@@ -117,7 +117,8 @@ async def test_consume_filtered_country_is_skipped(  # noqa: PLR0913
         msg_body(entity.value, action, country="CZ"),  # skip CZ
     )
 
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.2)
+
     await wait_for_empty_rmq_queue(rmq_channel, entity, settings, 20)
     assert await redis.keys() == []
     assert await redis.llen(REDIS_KEYS_MAP[entity.value]) == 0
