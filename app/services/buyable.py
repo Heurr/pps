@@ -16,7 +16,6 @@ class BuyableService(SimpleEntityBaseService[OfferDBSchema, BuyableCreateSchema]
         offers: list[EntityUpdate[OfferDBSchema, BuyableCreateSchema]],
     ) -> list[PriceEvent]:
         price_events = []
-        created_at = utc_now()
         for offer in offers:
             # we store buyability for existing offers only
             assert offer.old
@@ -29,7 +28,7 @@ class BuyableService(SimpleEntityBaseService[OfferDBSchema, BuyableCreateSchema]
                         price=offer.old.price,
                         country_code=offer.old.country_code,
                         currency_code=offer.old.currency_code,
-                        created_at=created_at,
+                        created_at=utc_now(),
                     )
                 )
             elif (not offer.new or not offer.new.buyable) and offer.old.buyable:
@@ -41,7 +40,7 @@ class BuyableService(SimpleEntityBaseService[OfferDBSchema, BuyableCreateSchema]
                         old_price=offer.old.price,
                         country_code=offer.old.country_code,
                         currency_code=offer.old.currency_code,
-                        created_at=created_at,
+                        created_at=utc_now(),
                     )
                 )
 

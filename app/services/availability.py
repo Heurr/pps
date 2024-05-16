@@ -18,7 +18,6 @@ class AvailabilityService(
         offers: list[EntityUpdate[OfferDBSchema, AvailabilityCreateSchema]],
     ) -> list[PriceEvent]:
         price_events = []
-        created_at = utc_now()
         for offer in offers:
             # we store availability for existing offers only
             assert offer.old
@@ -51,7 +50,7 @@ class AvailabilityService(
                         ),
                         country_code=offer.old.country_code,
                         currency_code=offer.old.currency_code,
-                        created_at=created_at,
+                        created_at=utc_now(),
                     )
                 )
 

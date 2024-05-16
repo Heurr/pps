@@ -19,7 +19,6 @@ class OfferService(BaseEntityService[OfferDBSchema, OfferCreateSchema]):
         _db_conn: AsyncConnection,
         offers: list[EntityUpdate[OfferDBSchema, OfferCreateSchema]],
     ) -> list[PriceEvent]:
-        created_at = utc_now()
         price_events = []
         for offer in offers:
             if offer.new:
@@ -54,7 +53,7 @@ class OfferService(BaseEntityService[OfferDBSchema, OfferCreateSchema]):
                     old_price=offer.old.price if offer.old else None,
                     country_code=country_code,
                     currency_code=currency_code,
-                    created_at=created_at,
+                    created_at=utc_now(),
                 )
                 for price_type in price_types
             ]

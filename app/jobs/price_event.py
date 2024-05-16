@@ -1,5 +1,4 @@
 import asyncio
-from collections import defaultdict
 from datetime import timedelta
 from typing import cast
 from uuid import UUID
@@ -12,12 +11,11 @@ from app.config.settings import JobSettings
 from app.constants import (
     PROCESS_SAFE_FLAG_REDIS_QUEUE_NAME,
     PUBLISHER_REDIS_QUEUE_NAME,
-    ProductPriceType,
 )
-from app.custom_types import ProductPricePk
+from app.custom_types import BasePricePk, ProductPricePk
 from app.jobs.base import BaseJob
 from app.schemas.price_event import PriceEvent
-from app.schemas.product_price import ProductPriceCreateSchema, ProductPriceDBSchema
+from app.schemas.product_price import ProductPriceDBSchema
 from app.services.event_processing import EventProcessingService
 from app.services.product_price import ProductPriceService
 from app.utils import utc_today
@@ -54,9 +52,7 @@ class PriceEventJob(BaseJob):
             )
 
             updated = await self.product_price_service.upsert_many(
-                conn,
-                self.deduplicate(to_update),
-                list(product_prices.values()),
+                conn, to_update, list(product_prices.values())
             )
             deleted = await crud.product_price.remove_many(conn, to_delete, utc_today())
 
@@ -92,7 +88,7 @@ class PriceEventJob(BaseJob):
 
     async def get_product_prices_by_events(
         self, conn: AsyncConnection, events: list[PriceEvent]
-    ) -> dict[tuple[UUID, ProductPriceType], ProductPriceDBSchema]:
+    ) -> dict[BasePricePk, ProductPriceDBSchema]:
         """
         Get product prices from the database, if safe processing is enabled
         (during the copying of yesterday's prices), get the missing prices
@@ -120,33 +116,6 @@ class PriceEventJob(BaseJob):
             )
             product_prices.extend(yesterdays_product_prices)
         return {
-            (product_price.product_id, product_price.price_type): product_price
+            BasePricePk(product_price.product_id, product_price.price_type): product_price
             for product_price in product_prices
         }
-
-    @staticmethod
-    def deduplicate(
-        product_prices: list[ProductPriceCreateSchema],
-    ) -> list[ProductPriceCreateSchema]:
-        """
-        Deduplicate product prices based on the primary key, and return
-        the latest one
-        """
-        product_prices_by_pk = defaultdict(list)
-        for product_price in product_prices:
-            product_prices_by_pk[
-                (product_price.day, product_price.product_id, product_price.price_type)
-            ].append(product_price)
-        result = []
-
-        for product_prices in product_prices_by_pk.values():
-            # No duplicates if only one product price
-            if len(product_prices) == 1:
-                result.append(product_prices[0])
-                continue
-
-            # Get the latest product price
-            product_prices.sort(key=lambda x: x.updated_at, reverse=True)
-            result.append(product_prices[0])
-
-        return result

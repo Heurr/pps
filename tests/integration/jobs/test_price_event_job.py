@@ -14,7 +14,7 @@ from app.constants import (
 )
 from app.jobs.price_event import PriceEventJob
 from app.schemas.price_event import PriceEventAction
-from app.utils import utc_today
+from app.utils import utc_now, utc_today
 from app.utils.pg_partitions import async_create_product_prices_part_tables_for_day
 from tests.conftest import push_to_redis_queue
 from tests.factories import offer_factory, price_event_factory, product_price_factory
@@ -195,6 +195,103 @@ async def test_price_event_job(
 
 
 @pytest.mark.anyio
+async def test_price_event_job_duplicate_keys_in_one_batch_create_update(
+    db_conn, entity_population_job: PriceEventJob, caplog, redis
+):
+    await push_to_redis_queue(
+        entity_population_job,
+        [
+            # Create a product price
+            price_event_factory(
+                action=PriceEventAction.UPSERT,
+                product_id=custom_uuid(1),
+                price_type=ProductPriceType.ALL_OFFERS,
+                price=1,
+                old_price=None,
+            ),
+            # Create another product price with the same key
+            price_event_factory(
+                action=PriceEventAction.UPSERT,
+                product_id=custom_uuid(1),
+                price_type=ProductPriceType.ALL_OFFERS,
+                price=2,
+                old_price=None,
+            ),
+        ],
+    )
+
+    product_prices = await crud.product_price.get_many(db_conn)
+    assert len(product_prices) == 1
+
+    assert {
+        (pp.product_id, pp.price_type, pp.max_price, pp.min_price)
+        for pp in product_prices
+    } == {
+        (custom_uuid(1), ProductPriceType.ALL_OFFERS, 2.0, 1.0),
+    }
+
+    assert await redis.scard(PUBLISHER_REDIS_QUEUE_NAME) == 1
+    assert set(await redis.spop(PUBLISHER_REDIS_QUEUE_NAME, 100)) == {
+        custom_uuid(1).bytes,
+    }
+
+    assert caplog.messages[-4] == "Processing 2 objects"
+    assert caplog.messages[-3] == "Upsert 1 product prices"
+    assert caplog.messages[-2] == "Delete 0 product prices"
+    assert caplog.messages[-1] == "Push 1 product ids to the publisher queue"
+
+
+async def test_price_event_job_duplicate_keys_in_one_batch_update_update(
+    db_conn, entity_population_job: PriceEventJob, caplog, redis
+):
+    await product_price_factory(
+        db_conn,
+        product_id=custom_uuid(1),
+        min_price=1,
+        max_price=1.1,
+        price_type=ProductPriceType.ALL_OFFERS,
+    )
+
+    await push_to_redis_queue(
+        entity_population_job,
+        [
+            price_event_factory(
+                action=PriceEventAction.UPSERT,
+                product_id=custom_uuid(1),
+                price_type=ProductPriceType.ALL_OFFERS,
+                price=2.1,
+                old_price=2.2,
+                # Test if sorting works by explicitly setting the created_at
+                created_at=utc_now() - timedelta(seconds=1),
+            ),
+            price_event_factory(
+                action=PriceEventAction.UPSERT,
+                product_id=custom_uuid(1),
+                price_type=ProductPriceType.ALL_OFFERS,
+                price=2.2,
+                old_price=2,
+                created_at=utc_now(),
+            ),
+        ],
+    )
+
+    product_prices = await crud.product_price.get_many(db_conn)
+    assert len(product_prices) == 1
+
+    assert {
+        (pp.product_id, pp.price_type, pp.max_price, pp.min_price)
+        for pp in product_prices
+    } == {
+        (custom_uuid(1), ProductPriceType.ALL_OFFERS, 2.2, 1.0),
+    }
+
+    assert caplog.messages[-4] == "Processing 2 objects"
+    assert caplog.messages[-3] == "Upsert 1 product prices"
+    assert caplog.messages[-2] == "Delete 0 product prices"
+    assert caplog.messages[-1] == "Push 1 product ids to the publisher queue"
+
+
+@pytest.mark.anyio
 async def test_price_event_job_safe_processing(
     db_conn, entity_population_job: PriceEventJob, caplog, redis: Redis
 ):
@@ -215,19 +312,25 @@ async def test_price_event_job_safe_processing(
         min_price=1,
         max_price=1,
     )
+    db_product_price = {
+        (price.day, price.product_id, price.price_type): price
+        for price in await crud.product_price.get_many(db_conn)
+    }
+    assert len(db_product_price) == 1
+
+    test = price_event_factory(
+        action=PriceEventAction.UPSERT,
+        product_id=custom_uuid(1),
+        price_type=ProductPriceType.ALL_OFFERS,
+        price=2,
+        old_price=None,
+        created_at=utc_now(),
+    )
 
     # Push upsert event for created product price
     await push_to_redis_queue(
         entity_population_job,
-        [
-            price_event_factory(
-                action=PriceEventAction.UPSERT,
-                product_id=custom_uuid(1),
-                price_type=ProductPriceType.ALL_OFFERS,
-                price=2,
-                old_price=None,
-            ),
-        ],
+        [test],
     )
 
     db_product_price = {

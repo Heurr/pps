@@ -29,7 +29,6 @@ JOB_METRICS = Counter(
     ["name", "stage"],
 )
 
-
 JOB_TIMER = Gauge(
     "job_timer",
     "Time taken to process one entity in the job",

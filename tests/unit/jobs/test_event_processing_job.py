@@ -9,7 +9,7 @@ from app.config.settings import JobSettings
 from app.constants import ProductPriceType
 from app.custom_types import ProductPricePk
 from app.jobs.price_event import PriceEventJob
-from app.utils import utc_now, utc_today
+from app.utils import utc_today
 from tests.factories import price_event_factory, product_price_factory
 from tests.utils import custom_uuid
 
@@ -34,32 +34,6 @@ async def event_processing_job(
     get_db_mock.return_value.__aenter__ = AsyncMock()
 
     return job
-
-
-@pytest.mark.anyio
-async def test_deduplicate(event_processing_job: PriceEventJob):
-    now = utc_now()
-    product_prices = [
-        await product_price_factory(product_id=custom_uuid(i // 5), updated_at=now)
-        for i in range(6)
-    ]
-    # Don't deduplicate different day
-    product_prices[0].day = utc_today() - timedelta(days=1)
-    # Don't deduplicate different type
-    product_prices[1].price_type = ProductPriceType.MARKETPLACE
-    # Deduplicate older price
-    product_prices[3].updated_at = now - timedelta(minutes=1)
-    # Deduplicate older price
-    product_prices[4].updated_at = now - timedelta(minutes=2)
-
-    res = event_processing_job.deduplicate(product_prices)
-    assert len(res) == 4
-    assert res == [
-        product_prices[0],  # Different day
-        product_prices[1],  # Different type
-        product_prices[2],  # Latest price for id 0
-        product_prices[5],  # Different id
-    ]
 
 
 @pytest.mark.anyio

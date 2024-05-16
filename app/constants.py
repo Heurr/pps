@@ -83,10 +83,11 @@ class Aggregate(StrEnum):
 
 
 class ProcessResultType(Enum):
-    UPDATED = 1
-    DELETED = 2
-    NOT_CHANGED = 3
-    INVALID = 4
+    CREATED = 1
+    UPDATED = 2
+    DELETED = 3
+    NOT_CHANGED = 4
+    INVALID = 5
 
 
 PLATFORM_COUNTRY_MAP = {

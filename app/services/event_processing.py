@@ -1,12 +1,11 @@
 import logging
 from typing import cast
-from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app import crud
-from app.constants import Aggregate, ProcessResultType, ProductPriceType
-from app.custom_types import ProductPriceDeletePk
+from app.constants import Aggregate, ProcessResultType
+from app.custom_types import BasePricePk, ProductPriceDeletePk
 from app.schemas.price_event import PriceChange, PriceEvent, PriceEventAction
 from app.schemas.product_price import ProductPriceCreateSchema, ProductPriceDBSchema
 from app.utils import utc_today
@@ -22,30 +21,46 @@ class EventProcessingService:
         self,
         db_conn: AsyncConnection,
         events: list[PriceEvent],
-        product_prices: dict[tuple[UUID, ProductPriceType], ProductPriceDBSchema],
+        product_prices: dict[BasePricePk, ProductPriceDBSchema],
     ) -> tuple[list[ProductPriceCreateSchema], list[ProductPriceDeletePk]]:
-        updates: list[ProductPriceCreateSchema] = []
+        """
+        Processing for upserts is handled sequentially, to ensure correct data
+        First a snapshot of product prices are created then events change the state
+        of the snapshot and at the end the snapshot is returned to be upserted
+        """
+        events.sort(key=lambda e: e.created_at)
+        product_prices_snapshot = {
+            pk: ProductPriceCreateSchema(**product_price.model_dump())
+            for pk, product_price in product_prices.items()
+        }
+
         deletes: list[ProductPriceDeletePk] = []
 
         for event in events:
             result_type, result_data = await self._process_event(
-                db_conn, event, product_prices.get((event.product_id, event.type))
+                db_conn,
+                event,
+                product_prices_snapshot.get(BasePricePk(event.product_id, event.type)),
             )
-            if result_type == ProcessResultType.UPDATED:
-                updates.append(cast(ProductPriceCreateSchema, result_data))
+
+            if result_type in (ProcessResultType.CREATED, ProcessResultType.UPDATED):
+                changed_product_price = cast(ProductPriceCreateSchema, result_data)
+                product_prices_snapshot[
+                    BasePricePk(
+                        changed_product_price.product_id, changed_product_price.price_type
+                    )
+                ] = changed_product_price
             elif result_type == ProcessResultType.DELETED:
                 deletes.append(cast(ProductPriceDeletePk, result_data))
 
-        return updates, deletes
+        return list(product_prices_snapshot.values()), deletes
 
     async def _process_event(
         self,
         db_conn: AsyncConnection,
         event: PriceEvent,
-        price: ProductPriceDBSchema | None,
-    ) -> tuple[
-        ProcessResultType, ProductPriceCreateSchema | tuple[UUID, ProductPriceType] | None
-    ]:
+        price: ProductPriceCreateSchema | None,
+    ) -> tuple[ProcessResultType, ProductPriceCreateSchema | ProductPriceDeletePk | None]:
         if event.action == PriceEventAction.UPSERT:
             result_type, result_data = await self._process_upsert_event(
                 db_conn, event, price
@@ -55,25 +70,35 @@ class EventProcessingService:
                 db_conn, event, price
             )
 
-        if result_type == ProcessResultType.UPDATED:
-            return ProcessResultType.UPDATED, ProductPriceCreateSchema(
+        if result_type == ProcessResultType.CREATED:
+            return result_type, ProductPriceCreateSchema(
                 day=utc_today(),
                 price_type=event.type,
                 updated_at=event.created_at,
                 **event.model_dump(),
                 **cast(PriceChange, result_data).model_dump(),
             )
+        elif result_type == ProcessResultType.UPDATED:
+            return result_type, ProductPriceCreateSchema(
+                updated_at=event.created_at,
+                day=utc_today(),
+                **price.model_dump(  # type: ignore[union-attr]
+                    exclude={"min_price", "max_price", "updated_at", "day"}
+                ),
+                **cast(PriceChange, result_data).model_dump(),
+            )
+
         return result_type, result_data  # type: ignore[return-value]
 
     async def _process_upsert_event(
         self,
         db_conn: AsyncConnection,
         event: PriceEvent,
-        price: ProductPriceDBSchema | None,
+        price: ProductPriceCreateSchema | None,
     ) -> tuple[ProcessResultType, ProcessResultDataType]:
         assert event.price  # UPSERT event has always price set
         if not price:
-            return ProcessResultType.UPDATED, PriceChange(
+            return ProcessResultType.CREATED, PriceChange(
                 min_price=event.price, max_price=event.price
             )
 
@@ -119,7 +144,7 @@ class EventProcessingService:
     async def _process_delete_event(
         db_conn: AsyncConnection,
         event: PriceEvent,
-        price: ProductPriceDBSchema | None,
+        price: ProductPriceCreateSchema | None,
     ) -> tuple[ProcessResultType, ProcessResultDataType]:
         if not price:
             return ProcessResultType.NOT_CHANGED, None

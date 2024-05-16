@@ -261,7 +261,7 @@ async def test_process_upsert_event_create_new(
 
     res = await event_processing_service._process_upsert_event(db_conn_mock, event, price)
 
-    assert res[0] == ProcessResultType.UPDATED
+    assert res[0] == ProcessResultType.CREATED
     assert res[1] == PriceChange(min_price=100, max_price=100)
 
 
@@ -358,7 +358,15 @@ async def test_process_event(
     process_mock = mocker.patch.object(event_processing_service, mock_name)
     process_mock.return_value = (process_result_type, process_result_data)
 
-    price = await product_price_factory(db_schema=True)
+    price = await product_price_factory(
+        db_schema=True,
+        product_id=custom_uuid(1),
+        country_code=CountryCode.SI,
+        currency_code=CurrencyCode.EUR,
+        price_type=ProductPriceType.ALL_OFFERS,
+        min_price=1,
+        max_price=1,
+    )
 
     res = await event_processing_service._process_event(db_conn_mock, event, price)
     process_mock.assert_called_once()
@@ -387,13 +395,13 @@ async def test_process_events_bulk(
         price_event_factory(
             product_id=custom_uuid(i), price_type=ProductPriceType.ALL_OFFERS
         )
-        for i in range(30)
+        for i in range(40)
     ]
     product_prices = [
         await product_price_factory(
             product_id=custom_uuid(i), price_type=ProductPriceType.ALL_OFFERS
         )
-        for i in range(30)
+        for i in range(40)
     ]
     product_prices = {(pp.product_id, pp.price_type): pp for pp in product_prices}
     process_event_mock.side_effect = (
@@ -405,23 +413,35 @@ async def test_process_events_bulk(
         + [
             (
                 ProcessResultType.UPDATED,
-                await product_price_factory(product_id=custom_uuid(i)),
+                await product_price_factory(
+                    product_id=custom_uuid(i), price_type=ProductPriceType.ALL_OFFERS
+                ),
+            )
+            for i in range(10)
+        ]
+        + [
+            (
+                ProcessResultType.CREATED,
+                await product_price_factory(
+                    product_id=custom_uuid(i), price_type=ProductPriceType.ALL_OFFERS
+                ),
             )
             for i in range(10)
         ]
     )
 
     # Call
-    res = await event_processing_service.process_events_bulk(
+    upserts, deletes = await event_processing_service.process_events_bulk(
         db_conn_mock,
         events,
         product_prices,
     )
 
     # Check
-    assert process_event_mock.call_count == 30
+    assert process_event_mock.call_count == 40
     for i, call in enumerate(process_event_mock.call_args_list):
         assert call[0] == (db_conn_mock, events[i], list(product_prices.values())[i])
 
-    assert len(res[0]) == 10
-    assert len(res[1]) == 10
+    # 30 Upserts are returned but only 10 would be upserted
+    assert len(upserts) == 40
+    assert len(deletes) == 10
