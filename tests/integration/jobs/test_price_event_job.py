@@ -1,4 +1,5 @@
 import asyncio
+from datetime import timedelta
 
 import pytest
 from redis.asyncio import Redis
@@ -6,12 +7,17 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from app import crud
 from app.config.settings import JobSettings
-from app.constants import PUBLISHER_REDIS_QUEUE_NAME, ProductPriceType
-from app.jobs.base import BaseJob
+from app.constants import (
+    PROCESS_SAFE_FLAG_REDIS_QUEUE_NAME,
+    PUBLISHER_REDIS_QUEUE_NAME,
+    ProductPriceType,
+)
 from app.jobs.price_event import PriceEventJob
-from app.schemas.price_event import PriceEvent, PriceEventAction
-from app.utils import dump_to_json
-from tests.factories import offer_factory, price_event_factory
+from app.schemas.price_event import PriceEventAction
+from app.utils import utc_today
+from app.utils.pg_partitions import async_create_product_prices_part_tables_for_day
+from tests.conftest import push_to_redis_queue
+from tests.factories import offer_factory, price_event_factory, product_price_factory
 from tests.utils import custom_uuid, override_obj_get_db_conn
 
 
@@ -29,13 +35,6 @@ async def entity_population_job(
 
     job.stop()
     await asyncio.wait_for(job_task, timeout=1)
-
-
-async def push_to_redis_queue(
-    job: BaseJob, ids: list[PriceEvent], wait: float = 0.3
-) -> None:
-    await job.redis.lpush(job.redis_queue, *[dump_to_json(obj) for obj in ids])
-    await asyncio.sleep(wait)
 
 
 @pytest.mark.anyio
@@ -193,3 +192,59 @@ async def test_price_event_job(
     assert caplog.messages[-3] == "Upsert 1 product prices"
     assert caplog.messages[-2] == "Delete 0 product prices"
     assert caplog.messages[-1] == "Push 1 product ids to the publisher queue"
+
+
+@pytest.mark.anyio
+async def test_price_event_job_safe_processing(
+    db_conn, entity_population_job: PriceEventJob, caplog, redis: Redis
+):
+    """
+    Test if when the safe processing flag is set, yesterday's product price is found
+    and created correctly for the current day
+    """
+    # Create tables for yesterday
+    await async_create_product_prices_part_tables_for_day(
+        db_conn, utc_today() - timedelta(days=1), 10
+    )
+    await redis.set(PROCESS_SAFE_FLAG_REDIS_QUEUE_NAME, "1")
+    await product_price_factory(
+        db_conn,
+        product_id=custom_uuid(1),
+        price_type=ProductPriceType.ALL_OFFERS,
+        day=utc_today() - timedelta(days=1),
+        min_price=1,
+        max_price=1,
+    )
+
+    # Push upsert event for created product price
+    await push_to_redis_queue(
+        entity_population_job,
+        [
+            price_event_factory(
+                action=PriceEventAction.UPSERT,
+                product_id=custom_uuid(1),
+                price_type=ProductPriceType.ALL_OFFERS,
+                price=2,
+                old_price=None,
+            ),
+        ],
+    )
+
+    db_product_price = {
+        (price.day, price.product_id, price.price_type): price
+        for price in await crud.product_price.get_many(db_conn)
+    }
+    assert len(db_product_price) == 2
+    yesterdays_product_price = db_product_price[
+        (utc_today() - timedelta(days=1), custom_uuid(1), ProductPriceType.ALL_OFFERS)
+    ]
+    todays_product_price = db_product_price[
+        (utc_today(), custom_uuid(1), ProductPriceType.ALL_OFFERS)
+    ]
+
+    assert yesterdays_product_price.max_price == 1
+    assert yesterdays_product_price.min_price == 1
+
+    # Price is correctly updated from previous days data
+    assert todays_product_price.max_price == 2
+    assert todays_product_price.min_price == 1

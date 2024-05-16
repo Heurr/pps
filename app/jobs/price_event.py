@@ -85,9 +85,9 @@ class PriceEventJob(BaseJob):
         today's data to tomorrow's data where it might happen that
         the copying process is not yet done
         """
-        res = await self.redis.lpop(self.process_safe_flag_name, count=1)
+        res = await self.redis.get(self.process_safe_flag_name)
         if res:
-            return res[0] == b"1"
+            return res == b"1"
         return False
 
     async def get_product_prices_by_events(

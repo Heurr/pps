@@ -157,6 +157,8 @@ class MaintenanceJobSettings(Settings):
     HISTORY_INTERVAL_IN_DAYS: int
     PARTITIONS_AHEAD: int
     PARTITIONS_FILL_FACTOR: int
+    SLEEP_TIMEOUT: float = 0.5
+    WAIT_FOR_NEW_DAY: bool = True
 
 
 class JobSettings(Settings):

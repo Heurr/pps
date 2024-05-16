@@ -154,14 +154,12 @@ async def test_get_product_prices_by_events_with_flag(
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize(
-    "lpop_return, flag", [([b"0"], False), ([b"1"], True), (None, False), ([], False)]
-)
+@pytest.mark.parametrize("get_return, flag", [(b"0", False), (b"1", True), (None, False)])
 async def test_get_process_safe_flag(
-    event_processing_job: PriceEventJob, mocker: MockFixture, lpop_return, flag
+    event_processing_job: PriceEventJob, mocker: MockFixture, get_return, flag
 ):
-    redis_mock = mocker.patch.object(event_processing_job.redis, "lpop")
-    redis_mock.return_value = lpop_return
+    redis_mock = mocker.patch.object(event_processing_job.redis, "get")
+    redis_mock.return_value = get_return
 
     res = await event_processing_job.get_process_safe_flag()
 

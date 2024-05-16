@@ -123,6 +123,7 @@ async def test_delete_product_prices_empty(db_conn):
     assert len(product_price_db) == 1
 
 
+@pytest.mark.anyio
 async def test_remove_history(db_conn):
     # We can't create in the past because partition tables are only created
     # for the future
@@ -148,19 +149,29 @@ async def test_remove_history(db_conn):
 @pytest.mark.anyio
 async def test_duplicate_day(db_conn):
     await product_price_factory(db_conn, product_id=custom_uuid(1))
+    await product_price_factory(db_conn, product_id=custom_uuid(2), min_price=1)
     await product_price_factory(
-        db_conn, product_id=custom_uuid(2), day=utc_today() + timedelta(days=1)
+        db_conn,
+        product_id=custom_uuid(2),
+        day=utc_today() + timedelta(days=1),
+        min_price=2,
     )
 
     await crud.product_price.duplicate_day(db_conn, utc_now().date())
 
     product_prices = await crud.product_price.get_many(db_conn)
-    assert len(product_prices) == 3
+    assert len(product_prices) == 4
     product_prices_map = {
         (price.product_id, price.day): price for price in product_prices
     }
+    # Copied product price is the same
     compare(
         product_prices_map[(custom_uuid(1), utc_today())],
         product_prices_map[(custom_uuid(1), utc_today() + timedelta(days=1))],
         ignore_keys=["day"],
+    )
+    # Already created product price is not overridden
+    assert (
+        product_prices_map[(custom_uuid(2), utc_today() + timedelta(days=1))].min_price
+        == 2
     )

@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock
 
 import freezegun
@@ -21,6 +21,7 @@ async def maintenance_job(
     missing_job_settings: MaintenanceJobSettings, mocker: MockFixture
 ) -> MaintenanceJob:
     job = MaintenanceJob(
+        AsyncMock(),
         AsyncMock(),
         missing_job_settings,
     )
@@ -94,3 +95,29 @@ async def test_create_new_product_prices(
 
     create_mock.assert_called_once_with(db_mock, utc_today())
     assert caplog.messages[-2] == f"Duplicating {utc_today()} product prices to tomorrow"
+
+
+@pytest.mark.anyio
+async def test_set_process_safe_flag(
+    maintenance_job: MaintenanceJob, mocker: MockFixture
+):
+    redis_mock = mocker.patch.object(maintenance_job.redis, "set")
+    await maintenance_job.set_process_safe_flag(True)
+    redis_mock.assert_called_once_with(maintenance_job.process_safe_flag_name, "1")
+
+    await maintenance_job.set_process_safe_flag(False)
+    redis_mock.assert_called_with(maintenance_job.process_safe_flag_name, "0")
+    assert redis_mock.call_count == 2
+
+
+@pytest.mark.anyio
+async def test_run_job(maintenance_job: MaintenanceJob, mocker: MockFixture):
+    sleep_mock = mocker.patch("app.jobs.maintenance.asyncio.sleep")
+    utc_today_mock = mocker.patch("app.jobs.maintenance.utc_today")
+    utc_today_mock.side_effect = 3 * [datetime(2021, 1, 1)] + 10 * [datetime(2021, 1, 2)]
+
+    with freezegun.freeze_time(datetime(2021, 1, 1, 23, 59, 30)):
+        await maintenance_job.run()
+
+    # First utc_now gets called before the loop, 2 times inside the loop
+    assert sleep_mock.call_count == 2

@@ -16,3 +16,5 @@ data:
   PPS_HISTORY_INTERVAL_IN_DAYS: {{ .Values.maintenance.historyInterval | quote }}
   PPS_PARTITIONS_AHEAD: {{ .Values.maintenance.partitionsAhead | quote }}
   PPS_PARTITIONS_FILL_FACTOR: {{ .Values.maintenance.partitionsFillFactor | quote }}
+  PPS_SLEEP_TIMEOUT: {{ .Values.maintenance.sleepTimeout | quote }}
+  PPS_WAIT_FOR_NEW_DAY: {{ .Values.maintenance.waitForNewDay | quote }}

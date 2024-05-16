@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,7 @@ from app.config.settings import (
 )
 from app.constants import Entity
 from app.db.pg import drop_db_tables
+from app.jobs import BaseJob
 from app.schemas.availability import AvailabilityMessageSchema
 from app.schemas.buyable import BuyableMessageSchema
 from app.schemas.offer import OfferMessageSchema
@@ -208,3 +210,8 @@ async def rmq_exchange(rmq_channel: AbstractChannel, rmq_settings) -> AbstractEx
 async def missing_job_settings():
     settings = EntityPopulationJobSettings()
     return settings
+
+
+async def push_to_redis_queue(job: BaseJob, ids: list, wait: float = 0.3) -> None:
+    await job.redis.lpush(job.redis_queue, *[dump_to_json(obj) for obj in ids])
+    await asyncio.sleep(wait)
