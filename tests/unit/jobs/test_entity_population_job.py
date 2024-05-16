@@ -35,7 +35,9 @@ async def entity_population_job_mock(
 
 
 @pytest.mark.anyio
-async def test_process(entity_population_job_mock: EntityPopulationJob, mocker):
+async def test_process_entity_population(
+    entity_population_job_mock: EntityPopulationJob, mocker
+):
     """
     Test if the process method of the EntityPopulationJob class calls
     and returns the correct ids
@@ -63,7 +65,7 @@ async def test_process(entity_population_job_mock: EntityPopulationJob, mocker):
         Entity.AVAILABILITY: {objects[2].id, objects[0].id},
     }
     mock_crud.assert_called_once()
-    assert mock_crud.call_args.args[1] == [Entity.BUYABLE, Entity.AVAILABILITY]
+    assert mock_crud.call_args.args[1] == Entity.AVAILABILITY
     assert mock_crud.call_args.args[2] == [OfferPk(objects[0].product_id, objects[0].id)]
 
 

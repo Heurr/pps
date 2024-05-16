@@ -114,7 +114,7 @@ async def test_missing_entities_job_expire_entities(
     Integration test for the EntityPopulationJob class, testing if newly created offers
     which expire are correctly marked as expired
     """
-    version = [(-1, -1), (-1, 0), (0, -1), (0, 0)]
+    version = [(-1, -1), (-1, 1), (1, -1), (1, 2)]
     offers = [
         await offer_factory(
             db_conn,
@@ -129,14 +129,23 @@ async def test_missing_entities_job_expire_entities(
     with freezegun.freeze_time(utc_now() + timedelta(seconds=2)):
         await entity_population_job.run()
 
-    assert caplog.messages[-7] == "Expired 3 offers"
+    assert "Expired 2 buyable entities" in caplog.messages
+    assert "Expired 2 availability entities" in caplog.messages
     assert "Pushed 2 ids for republish to om-buyable.v1.republish" in caplog.messages
     assert "Pushed 2 ids for republish to availability.v1.republish" in caplog.messages
 
     offers_in_db = {o.id: o for o in await crud.offer.get_many(db_conn)}
-    for offer in offers:
-        assert offers_in_db[offer.id].buyable_version == 0
-        assert offers_in_db[offer.id].availability_version == 0
+    assert offers_in_db[offers[0].id].buyable_version == 0
+    assert offers_in_db[offers[0].id].availability_version == 0
+
+    assert offers_in_db[offers[1].id].availability_version == 0
+    assert offers_in_db[offers[1].id].buyable_version == 1
+
+    assert offers_in_db[offers[2].id].availability_version == 1
+    assert offers_in_db[offers[2].id].buyable_version == 0
+
+    assert offers_in_db[offers[3].id].availability_version == 1
+    assert offers_in_db[offers[3].id].buyable_version == 2
 
     # Read all msgs from queue
     msgs: list[AbstractIncomingMessage] = []

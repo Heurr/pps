@@ -221,7 +221,7 @@ async def test_set_offers_as_populated(db_conn):
 
     await crud.offer.set_offers_as_populated(
         db_conn,
-        [Entity.AVAILABILITY],
+        Entity.AVAILABILITY,
         [OfferPk(offer.product_id, offer.id) for offer in offers],
     )
 

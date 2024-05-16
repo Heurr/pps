@@ -74,7 +74,7 @@ class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema]):
                 yield [PopulationOfferSchema.model_validate(row) for row in batch]
 
     async def set_offers_as_populated(
-        self, db_conn: AsyncConnection, entities: list[Entity], pks: list[OfferPk]
+        self, db_conn: AsyncConnection, entity: Entity, pks: list[OfferPk]
     ) -> None:
         """
         Set offers as populated for given entities by setting their version to 0.
@@ -82,7 +82,7 @@ class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema]):
         stmt = (
             self.table.update()
             .where(tuple_(self.table.c.product_id, self.table.c.id).in_(pks))
-            .values({ENTITY_VERSION_COLUMNS[entity]: 0 for entity in entities})
+            .values({ENTITY_VERSION_COLUMNS[entity]: 0})
         )
         await db_conn.execute(stmt)
 

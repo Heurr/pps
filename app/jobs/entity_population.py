@@ -72,7 +72,7 @@ class EntityPopulationJob:
         it returns them for further processing
         """
         expire_threshold = utc_now() - timedelta(seconds=self.expire_time)
-        expired_pks = []
+        expired_pks = defaultdict(set)
         unpopulated_ids = defaultdict(set)
         for offer in batch:
             # Also add expired ids to unpopulated offers at least once
@@ -80,18 +80,21 @@ class EntityPopulationJob:
             for entity in self.entities:
                 if getattr(offer, ENTITY_VERSION_COLUMNS[entity]) == -1:
                     unpopulated_ids[entity].add(offer.id)
-            if offer.created_at < expire_threshold:
-                expired_pks.append(OfferPk(offer.product_id, offer.id))
+                    if offer.created_at < expire_threshold:
+                        expired_pks[entity].add(OfferPk(offer.product_id, offer.id))
 
         if expired_pks:
             await self.expire_offers(expired_pks)
-        self.logger.info("Expired %d offers", len(expired_pks))
         return unpopulated_ids
 
-    async def expire_offers(self, expired_pks):
+    async def expire_offers(self, expired_pks: dict[Entity, set[OfferPk]]):
         """
         Use autocommit connection to avoid deadlocks when marking offers as populated
         """
-        POPULATION_JOB.labels(entity="all", status="expire").inc(len(expired_pks))
         async with self.get_db_conn_auto_commit() as conn:
-            await crud.offer.set_offers_as_populated(conn, self.entities, expired_pks)
+            for entity, ids in expired_pks.items():
+                POPULATION_JOB.labels(entity=entity, status="expire").inc(
+                    len(expired_pks)
+                )
+                await crud.offer.set_offers_as_populated(conn, entity, list(ids))
+                self.logger.info("Expired %d %s entities", len(expired_pks), entity)
