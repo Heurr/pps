@@ -16,6 +16,7 @@ class ProductPricePk(NamedTuple):
     price_type: ProductPriceType
 
 
+# TODO unify these two enums
 class ProductPriceDeletePk(NamedTuple):
     product_id: UUID
     price_type: ProductPriceType
@@ -24,3 +25,10 @@ class ProductPriceDeletePk(NamedTuple):
 class BasePricePk(NamedTuple):
     product_id: UUID
     price_type: ProductPriceType
+
+
+class MinMaxPrice(NamedTuple):
+    product_id: UUID
+    price_type: ProductPriceType
+    min_price: float | None
+    max_price: float | None

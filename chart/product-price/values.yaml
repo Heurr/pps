@@ -231,6 +231,9 @@ cronJobs:
   maintenance:
     schedule: "50 23 * * *" # Every day at 23:50 UTC
     args: "maintenance-job"
+  validation-job:
+    schedule: "0 * * * *"
+    args: "validation-job"
 
 entityPopulation:
   targetRoutingKeyMap:

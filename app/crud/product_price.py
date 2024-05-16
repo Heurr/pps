@@ -12,7 +12,7 @@ from sqlalchemy import Table, text, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from app.custom_types import ProductPriceDeletePk, ProductPricePk
+from app.custom_types import MinMaxPrice, ProductPriceDeletePk, ProductPricePk
 from app.db.tables.product_price import product_price_table
 from app.schemas.product_price import ProductPriceCreateSchema, ProductPriceDBSchema
 from app.utils.pg_partitions import get_product_price_partition_name
@@ -126,6 +126,24 @@ class CRUDProductPrice:
         res = await db_conn.execute(stmt)
         deleted_ids = [ProductPricePk(r.day, r.product_id, r.price_type) for r in res]
         return deleted_ids
+
+    @staticmethod
+    async def get_sample_for_day(
+        db_conn: AsyncConnection,
+        day: datetime.date,
+        pct: float,
+        limit: int,
+    ) -> list[MinMaxPrice]:
+        """Retrieves a random sample of rows from the product price table for a specific day."""
+        stmt = text(
+            f""" SELECT product_id, price_type, min_price, max_price
+                 FROM {get_product_price_partition_name(day)}
+                TABLESAMPLE bernoulli (:pct)
+                LIMIT :limit
+                """
+        ).bindparams(pct=pct, limit=limit)
+        rows = await db_conn.execute(stmt)
+        return [MinMaxPrice(*row) for row in rows]
 
     @staticmethod
     async def remove_history(db_conn: AsyncConnection, day: datetime.date) -> None:

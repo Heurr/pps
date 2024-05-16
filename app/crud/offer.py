@@ -110,7 +110,6 @@ class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema]):
             {additional_condition}
             """
         ).bindparams(bindparam("product_id", value=product_id))
-
         row = await db_conn.execute(stmt)
         return row.first()[0]  # type: ignore
 

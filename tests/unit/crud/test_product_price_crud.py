@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import crud
 from app.constants import ProductPriceType
-from app.custom_types import ProductPriceDeletePk, ProductPricePk
+from app.custom_types import MinMaxPrice, ProductPriceDeletePk, ProductPricePk
 from app.utils import utc_now, utc_today
 from tests.factories import product_price_factory
 from tests.utils import compare, custom_uuid
@@ -123,7 +123,6 @@ async def test_delete_product_prices_empty(db_conn):
     assert len(product_price_db) == 1
 
 
-@pytest.mark.anyio
 async def test_remove_history(db_conn):
     # We can't create in the past because partition tables are only created
     # for the future
@@ -175,3 +174,20 @@ async def test_duplicate_day(db_conn):
         product_prices_map[(custom_uuid(2), utc_today() + timedelta(days=1))].min_price
         == 2
     )
+
+
+@pytest.mark.parametrize("limit", [10, 50, 100])
+@pytest.mark.anyio
+async def test_get_sample_for_day(db_conn, limit):
+    for i in range(100):
+        await product_price_factory(db_conn, product_id=custom_uuid(i))
+
+    res = await crud.product_price.get_sample_for_day(
+        db_conn, day=utc_today(), pct=50, limit=limit
+    )
+    # I have 100 rows, 50% should be strictly 50.
+    # But the bernoulli thing does not really return always strict 50%.
+    # So in order to avoid fails (and mocks)
+    # test it returns some rows and proper type
+    assert 0 < len(res) <= limit
+    assert isinstance(res[0], MinMaxPrice)

@@ -161,6 +161,11 @@ class MaintenanceJobSettings(Settings):
     WAIT_FOR_NEW_DAY: bool = True
 
 
+class ValidationJobSettings(BaseSettings):
+    BERNOULLI_PCT: float = 0.005
+    LIMIT: int = 1000
+
+
 class JobSettings(Settings):
     JOB_BATCH_SIZE: int = 200
     JOB_QUEUE_POP_TIMEOUT: float = 0.2

@@ -8,7 +8,7 @@ import typer
 
 from alembic import command as alembic_command
 from alembic.config import Config as AlembicConfig
-from app.config.settings import JobSettings, WorkerSetting
+from app.config.settings import JobSettings, ValidationJobSettings, WorkerSetting
 from app.constants import PRICE_EVENT_QUEUE, Entity, Job
 from app.consumer_app import run_entity_consumer
 from app.db import db_adapter
@@ -16,6 +16,7 @@ from app.job_app import job_app
 from app.jobs.entity_population import EntityPopulationJob
 from app.jobs.maintenance import MaintenanceJob
 from app.jobs.price_to_rabbit import PriceToRabbitEventJob
+from app.jobs.validation import ValidationJob
 from app.utils.log import prepare_logging
 from app.utils.product_price_entity_client import ProductPriceEntityClient
 from app.utils.redis_adapter import RedisAdapter
@@ -111,6 +112,23 @@ def entity_population_job(entities: list[Entity]):
     logger.info("Sleeping for %s seconds to let metrics be scraped", sleep_duration)
     sleep(sleep_duration)
     logger.info("Entity population job finished")
+
+
+@app.command()
+def validation_job():
+    logger.info("Starting validation job")
+    init_sentry(server_name="validation-job", component="job")
+
+    async def run_validation_job():
+        try:
+            async with db_adapter as db_engine:
+                job = ValidationJob(db_engine, ValidationJobSettings())
+                await job.run()
+        except Exception as exc:
+            logger.exception("Validation job failed", exc_info=exc)
+
+    asyncio.run(run_validation_job())
+    logger.info("Validation job finished")
 
 
 @app.command()

@@ -29,6 +29,10 @@ JOB_METRICS = Counter(
     ["name", "stage"],
 )
 
+VALIDATION_METRIC = Counter(
+    "validation_metric", "Number of records that were validated", ["status"]
+)
+
 JOB_TIMER = Gauge(
     "job_timer",
     "Time taken to process one entity in the job",
