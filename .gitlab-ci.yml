@@ -1,4 +1,4 @@
-image: registry.gitlab.heu.group/docker-tools/pipelines:v8.12
+image: registry.gitlab.heu.group/docker-tools/pipelines:v8.13
 
 variables:
   IMAGE_REPOSITORY: "$CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG"
