@@ -93,8 +93,6 @@ class EntityPopulationJob:
         """
         async with self.get_db_conn_auto_commit() as conn:
             for entity, ids in expired_pks.items():
-                POPULATION_JOB.labels(entity=entity, status="expire").inc(
-                    len(expired_pks)
-                )
+                POPULATION_JOB.labels(entity=entity, status="expire").inc(len(ids))
                 await crud.offer.set_offers_as_populated(conn, entity, list(ids))
-                self.logger.info("Expired %d %s entities", len(expired_pks), entity)
+                self.logger.info("Expired %d %s entities", len(ids), entity)
