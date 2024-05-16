@@ -128,6 +128,10 @@ def validation_job():
             logger.exception("Validation job failed", exc_info=exc)
 
     asyncio.run(run_validation_job())
+
+    sleep_duration = 60
+    logger.info("Sleeping for %s seconds to let metrics be scraped", sleep_duration)
+    sleep(sleep_duration)
     logger.info("Validation job finished")
 
 
