@@ -8,7 +8,12 @@ import typer
 
 from alembic import command as alembic_command
 from alembic.config import Config as AlembicConfig
-from app.config.settings import JobSettings, ValidationJobSettings, WorkerSetting
+from app.config.settings import (
+    JobSettings,
+    MaintenanceJobSettings,
+    ValidationJobSettings,
+    WorkerSetting,
+)
 from app.constants import PRICE_EVENT_QUEUE, Entity, Job
 from app.consumer_app import run_entity_consumer
 from app.db import db_adapter
@@ -167,11 +172,13 @@ def maintenance_job():
     init_sentry(server_name="maintenance-job", component="job")
 
     async def run_maintenance_job():
+        maintenance_job_settings = MaintenanceJobSettings()
         try:
-            async with db_adapter as db_engine:
-                job = MaintenanceJob(
-                    db_engine,
-                )
+            async with (
+                db_adapter as db_engine,
+                RedisAdapter(maintenance_job_settings.redis_dsn) as redis,
+            ):
+                job = MaintenanceJob(db_engine, redis, maintenance_job_settings)
                 await job.run()
         except Exception as exc:
             logger.exception("Maintenance job failed", exc_info=exc)

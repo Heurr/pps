@@ -93,8 +93,11 @@ async def test_create_new_product_prices(
     create_mock = mocker.patch.object(crud.product_price, "duplicate_day")
     await maintenance_job.create_new_product_prices(db_mock)
 
-    create_mock.assert_called_once_with(db_mock, utc_today())
-    assert caplog.messages[-2] == f"Duplicating {utc_today()} product prices to tomorrow"
+    create_mock.assert_called_once_with(db_mock, utc_today() - timedelta(days=1))
+    assert (
+        caplog.messages[-2]
+        == f"Duplicating {utc_today() - timedelta(days=1)} product prices to today"
+    )
 
 
 @pytest.mark.anyio

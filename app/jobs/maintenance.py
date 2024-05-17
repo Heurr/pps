@@ -3,7 +3,6 @@ import logging
 from contextlib import asynccontextmanager
 from datetime import timedelta
 
-from asyncpg import UndefinedTableError
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
@@ -48,6 +47,8 @@ class MaintenanceJob:
         starts, we don't want to start copying data to the new
         day without being sure that the previous day is over.
         """
+        if self.wait_for_new_day:
+            self.logger.info("Waiting for new day to start")
 
         start_day = utc_today()
         while start_day == utc_today() and self.wait_for_new_day:
@@ -65,9 +66,8 @@ class MaintenanceJob:
         self.logger.info("Deleting product prices older than %s", delete_before)
         try:
             await crud.product_price.remove_history(db_conn, delete_before)
-        # This is thrown when the table to delete doesn't exist
-        except UndefinedTableError:
-            self.logger.info("No history to delete")
+        except Exception as ex:
+            self.logger.error("Deletion failed", exc_info=ex)
         self.logger.info("Done deleting")
 
     async def create_new_product_prices_partition(self, db_conn: AsyncConnection):
@@ -89,9 +89,9 @@ class MaintenanceJob:
 
     async def create_new_product_prices(self, db_conn: AsyncConnection):
         now = utc_now()
-        today = now.date()
-        self.logger.info("Duplicating %s product prices to tomorrow", today)
-        await crud.product_price.duplicate_day(db_conn, today)
+        yesterday = now.date() - timedelta(days=1)
+        self.logger.info("Duplicating %s product prices to today", yesterday)
+        await crud.product_price.duplicate_day(db_conn, yesterday)
         end = utc_now()
         self.logger.info("Done duplicating in %s", end - now)
 

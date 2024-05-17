@@ -13,6 +13,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.custom_types import MinMaxPrice, ProductPriceDeletePk, ProductPricePk
+from app.db.pg import get_table_names
 from app.db.tables.product_price import product_price_table
 from app.schemas.product_price import ProductPriceCreateSchema, ProductPriceDBSchema
 from app.utils.pg_partitions import get_product_price_partition_name
@@ -145,11 +146,15 @@ class CRUDProductPrice:
         rows = await db_conn.execute(stmt)
         return [MinMaxPrice(*row) for row in rows]
 
-    @staticmethod
-    async def remove_history(db_conn: AsyncConnection, day: datetime.date) -> None:
+    async def remove_history(self, db_conn: AsyncConnection, day: datetime.date) -> None:
+        existing_tables = await get_table_names(db_conn)
+        table_name = get_product_price_partition_name(day)
+        if table_name not in existing_tables:
+            self.logger.error("Table %s does not exist", table_name)
+            return
         stmt = text(
             f"""
-            DROP TABLE {get_product_price_partition_name(day)}
+            DROP TABLE {table_name}
             """
         )
         await db_conn.execute(stmt)

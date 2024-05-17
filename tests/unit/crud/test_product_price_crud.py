@@ -146,6 +146,17 @@ async def test_remove_history(db_conn):
 
 
 @pytest.mark.anyio
+async def test_remove_history_nonexistent_table(db_conn, caplog):
+    delete_date = utc_now() - timedelta(days=365)
+    await crud.product_price.remove_history(db_conn, delete_date)
+
+    assert (
+        f"Table product_prices_{delete_date.strftime('%Y%m%d')} does not exist"
+        in caplog.messages
+    )
+
+
+@pytest.mark.anyio
 async def test_duplicate_day(db_conn):
     await product_price_factory(db_conn, product_id=custom_uuid(1))
     await product_price_factory(db_conn, product_id=custom_uuid(2), min_price=1)
