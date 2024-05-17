@@ -86,8 +86,8 @@ class ProcessResultType(Enum):
     CREATED = 1
     UPDATED = 2
     DELETED = 3
-    NOT_CHANGED = 4
-    INVALID = 5
+    UNCHANGED = 4
+    OBSOLETE = 5
 
 
 PLATFORM_COUNTRY_MAP = {

@@ -10,7 +10,7 @@ from app.constants import ENTITY_VERSION_COLUMNS, PRICE_EVENT_QUEUE, Entity
 from app.crud import crud_from_entity
 from app.crud.base import CreateSchemaTypeT, CRUDBase, DBSchemaTypeT
 from app.metrics import UPDATE_METRICS
-from app.schemas.price_event import EntityUpdate, PriceEvent
+from app.schemas.price_event import PriceEvent
 from app.utils import dump_to_json
 
 CRUDTypeT = TypeVar("CRUDTypeT", bound=CRUDBase)
@@ -46,18 +46,27 @@ class BaseEntityService(
             i.id: i for i in await self.crud.get_in(db_conn, list(msg_map.keys()))
         }
         objs_to_upsert: list[CreateSchemaTypeT] = []
-        updated_entities: list[EntityUpdate[DBSchemaTypeT, CreateSchemaTypeT]] = []
+        price_events: list[PriceEvent] = []
 
         for incoming_msg_id, incoming_msg in msg_map.items():
             obj_from_db = objs_from_db.get(incoming_msg_id)
             if self.should_be_updated(obj_from_db, incoming_msg):
+                if obj_from_db is None:
+                    price_events.extend(
+                        await self.generate_price_events_for_new(db_conn, incoming_msg)
+                    )
+                else:
+                    price_events.extend(
+                        await self.generate_price_events_for_updated(
+                            db_conn, obj_from_db, incoming_msg
+                        )
+                    )
                 objs_to_upsert.append(incoming_msg)
-                updated_entities.append(EntityUpdate(old=obj_from_db, new=incoming_msg))
 
         if not objs_to_upsert:
             return []
+
         upserted_ids = await self.crud.upsert_many(db_conn, objs_to_upsert)
-        price_events = await self.generate_price_events(db_conn, updated_entities)
         await self.send_price_events(redis, price_events)
         return upserted_ids
 
@@ -106,24 +115,56 @@ class BaseEntityService(
 
         deleted_ids = await self.crud.remove_many(db_conn, ids_versions_newer)
         deleted_ids_set = set(deleted_ids)
-        price_events = await self.generate_price_events(
-            db_conn,
-            [
-                EntityUpdate(new=None, old=e)
-                for e in old_entities
-                if e.id in deleted_ids_set
-            ],
-        )
+        old_entities = [e for e in old_entities if e.id in deleted_ids_set]
+
+        price_events = []
+        for old_entity in old_entities:
+            price_events.extend(
+                await self.generate_price_events_for_delete(db_conn, old_entity)
+            )
         await self.send_price_events(redis, price_events)
         return deleted_ids
 
-    async def generate_price_events(
-        self,
-        _db_conn: AsyncConnection,
-        _entities: list[EntityUpdate[DBSchemaTypeT, CreateSchemaTypeT]],
+    async def generate_price_events_for_new(
+        self, db_conn: AsyncConnection, new_entity: CreateSchemaTypeT
     ) -> list[PriceEvent]:
-        """Override to generate appropriate price events for the given entity upserts/deletes"""
-        return []
+        """
+        Generate price events for entity that are new. Because Availability and Buyable
+        entities are part of Offer entity/table their first incoming messages
+        should not be considered as new events.
+
+        :param db_conn: It is only needed to generate price events related to shop changes.
+        :param new_entity: Create schemas of new entity.
+        """
+        raise NotImplementedError()
+
+    async def generate_price_events_for_updated(
+        self,
+        db_conn: AsyncConnection,
+        orig_db_entity: DBSchemaTypeT,
+        new_entity: CreateSchemaTypeT,
+    ) -> list[PriceEvent]:
+        """
+        Generate price events for entity that was changed.
+        It requires both original db record and a new create schema.
+
+        :param db_conn: It is only needed to generate price events related to shop changes.
+        :param new_entity: Create schemas of new entity.
+        :param orig_db_entity: Original db entity, usually OfferDB.
+        """
+        raise NotImplementedError()
+
+    async def generate_price_events_for_delete(
+        self, db_conn: AsyncConnection, orig_db_entity: DBSchemaTypeT
+    ) -> list[PriceEvent]:
+        """
+        Generate price event for entity that was deleted.
+        Only original db entity is needed.
+
+        :param db_conn: It is only needed to generate price events related to shop changes.
+        :param orig_db_entity: Original db entity, usually OfferDB.
+        """
+        raise NotImplementedError()
 
     async def send_price_events(self, redis: Redis, events: list[PriceEvent]):
         if events:

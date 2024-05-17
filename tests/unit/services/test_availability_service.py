@@ -186,14 +186,14 @@ async def test_upsert_generate_events(
     assert events[3].product_id == custom_uuid(4)
     assert events[3].type == ProductPriceType.IN_STOCK
     assert events[3].action == PriceEventAction.DELETE
-    assert events[3].price is None
-    assert events[3].old_price == 40.0
+    assert events[3].price == 40.0
+    assert events[3].old_price is None
 
     assert events[4].product_id == custom_uuid(4)
     assert events[4].type == ProductPriceType.IN_STOCK_CERTIFIED
     assert events[4].action == PriceEventAction.DELETE
-    assert events[4].price is None
-    assert events[4].old_price == 40.0
+    assert events[4].price == 40.0
+    assert events[4].old_price is None
 
 
 @pytest.mark.anyio
@@ -229,11 +229,11 @@ async def test_delete_generate_events(
     assert events[0].product_id == custom_uuid(4)
     assert events[0].type == ProductPriceType.IN_STOCK
     assert events[0].action == PriceEventAction.DELETE
-    assert events[0].price is None
-    assert events[0].old_price == 40.0
+    assert events[0].price == 40.0
+    assert events[0].old_price is None
 
     assert events[1].product_id == custom_uuid(4)
     assert events[1].type == ProductPriceType.IN_STOCK_CERTIFIED
     assert events[1].action == PriceEventAction.DELETE
-    assert events[1].price is None
-    assert events[1].old_price == 40.0
+    assert events[1].price == 40.0
+    assert events[1].old_price is None

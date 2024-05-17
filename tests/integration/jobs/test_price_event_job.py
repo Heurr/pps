@@ -128,16 +128,16 @@ async def test_price_event_job(
                 action=PriceEventAction.DELETE,
                 product_id=custom_uuid(1),
                 price_type=ProductPriceType.MARKETPLACE,
-                price=None,
-                old_price=4,
+                price=4,
+                old_price=None,
             ),
             # Do nothing
             price_event_factory(
                 action=PriceEventAction.DELETE,
                 product_id=custom_uuid(3),
                 price_type=ProductPriceType.IN_STOCK_CERTIFIED,
-                price=None,
-                old_price=1.2,
+                price=1.2,
+                old_price=None,
             ),
         ],
     )
@@ -180,17 +180,14 @@ async def test_price_event_job(
     assert await redis.scard(PUBLISHER_REDIS_QUEUE_NAME) == 1
     assert await redis.spop(PUBLISHER_REDIS_QUEUE_NAME, 100) == [custom_uuid(1).bytes]
 
-    assert caplog.messages[-12] == "Processing 4 objects"
-    assert caplog.messages[-11] == "Upsert 3 product prices"
-    assert caplog.messages[-10] == "Delete 0 product prices"
-    assert caplog.messages[-9] == "Push 2 product ids to the publisher queue"
-    assert caplog.messages[-8] == "Processing 3 objects"
-    assert caplog.messages[-7] == "Upsert 1 product prices"
-    assert caplog.messages[-6] == "Delete 1 product prices"
-    assert caplog.messages[-5] == "Push 1 product ids to the publisher queue"
-    assert caplog.messages[-4] == "Processing 1 objects"
-    assert caplog.messages[-3] == "Upsert 1 product prices"
-    assert caplog.messages[-2] == "Delete 0 product prices"
+    assert caplog.messages[-9] == "Processing 4 objects"
+    assert caplog.messages[-8] == "upserted 3 | deleted 0 | obsolete 0 | unchanged 1"
+    assert caplog.messages[-7] == "Push 2 product ids to the publisher queue"
+    assert caplog.messages[-6] == "Processing 3 objects"
+    assert caplog.messages[-5] == "upserted 1 | deleted 1 | obsolete 0 | unchanged 1"
+    assert caplog.messages[-4] == "Push 1 product ids to the publisher queue"
+    assert caplog.messages[-3] == "Processing 1 objects"
+    assert caplog.messages[-2] == "upserted 1 | deleted 0 | obsolete 0 | unchanged 0"
     assert caplog.messages[-1] == "Push 1 product ids to the publisher queue"
 
 
@@ -235,9 +232,8 @@ async def test_price_event_job_duplicate_keys_in_one_batch_create_update(
         custom_uuid(1).bytes,
     }
 
-    assert caplog.messages[-4] == "Processing 2 objects"
-    assert caplog.messages[-3] == "Upsert 1 product prices"
-    assert caplog.messages[-2] == "Delete 0 product prices"
+    assert caplog.messages[-3] == "Processing 2 objects"
+    assert caplog.messages[-2] == "upserted 1 | deleted 0 | obsolete 0 | unchanged 0"
     assert caplog.messages[-1] == "Push 1 product ids to the publisher queue"
 
 
@@ -286,9 +282,8 @@ async def test_price_event_job_duplicate_keys_in_one_batch_update_update(
         (custom_uuid(1), ProductPriceType.ALL_OFFERS, 2.2, 1.0),
     }
 
-    assert caplog.messages[-4] == "Processing 2 objects"
-    assert caplog.messages[-3] == "Upsert 1 product prices"
-    assert caplog.messages[-2] == "Delete 0 product prices"
+    assert caplog.messages[-3] == "Processing 2 objects"
+    assert caplog.messages[-2] == "upserted 1 | deleted 0 | obsolete 0 | unchanged 0"
     assert caplog.messages[-1] == "Push 1 product ids to the publisher queue"
 
 

@@ -141,6 +141,7 @@ async def push_messages_and_process_them_by_worker(
     wait_multiplier: float = 1.1,
 ):
     worker.redis_pop_timeout = 0.01
+    worker.should_consume = True
     consuming_task = asyncio.create_task(worker.consume_and_process_messages())
     redis_list = f"rmq-{worker.entity.value}"
 

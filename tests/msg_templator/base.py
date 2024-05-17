@@ -39,7 +39,7 @@ def _replace_with_new_value(value_key: str, new_value: Any, msg_template: dict) 
 
 def _replace_with_new_data(new_data: dict, msg_template: dict) -> None:
     """
-    Iterate ove newr data recursively and if a key is found in booth source and template
+    Iterate over new data recursively and if a key is found in booth source and template
     data, replace the key with the provided value inside the template data
 
     Templating lists is not nested, that means if there is a dict inside a

@@ -247,6 +247,51 @@ async def test_generate_price_event_delete(
 
 
 @pytest.mark.anyio
+@freeze_time("2024-04-26")
+async def test_generate_price_event_product_id_changed(
+    offer_service: OfferService, offers: list[OfferDBSchema], mocker
+):
+    """
+    Incoming offer message with different product_id then current offer in db
+    should generate UPSERT events for new product_id and DELETE events for
+    original product_id
+    """
+    crud_get_in_mock = mocker.patch.object(crud.offer, "get_in")
+    crud_get_in_mock.return_value = offers
+    mocker.patch.object(crud.offer, "upsert_many")
+    send_price_events_mock = mocker.patch.object(offer_service, "send_price_events")
+    db_conn_mock = mocker.AsyncMock()
+    redis_mock = mocker.AsyncMock()
+
+    offers_msgs = [
+        await offer_factory(
+            offer_id=custom_uuid(2), product_id=custom_uuid(3), price=2, version=3
+        )
+    ]
+    await offer_service.upsert_many(db_conn_mock, redis_mock, offers_msgs)
+    events = send_price_events_mock.call_args.args[1]
+    assert len(events) == 4
+
+    # UPSERT for new product_id - ALL_OFFERS and IN_STOCK
+    assert events[0].product_id == custom_uuid(3)
+    assert events[0].type == ProductPriceType.ALL_OFFERS
+    assert events[0].action == PriceEventAction.UPSERT
+
+    assert events[1].product_id == custom_uuid(3)
+    assert events[1].type == ProductPriceType.IN_STOCK
+    assert events[1].action == PriceEventAction.UPSERT
+
+    # DELETE for original product_id - ALL_OFFERS and IN_STOCK
+    assert events[2].product_id == custom_uuid(2)
+    assert events[2].type == ProductPriceType.ALL_OFFERS
+    assert events[2].action == PriceEventAction.DELETE
+
+    assert events[3].product_id == custom_uuid(2)
+    assert events[3].type == ProductPriceType.IN_STOCK
+    assert events[3].action == PriceEventAction.DELETE
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     "column, old_value_in_db, new_value_in_msg",
     [

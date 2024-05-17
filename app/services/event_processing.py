@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass, field
 from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -13,6 +14,14 @@ from app.utils import utc_today
 ProcessResultDataType = PriceChange | ProductPriceDeletePk | None
 
 
+@dataclass
+class EventProcessingResult:
+    upserted: list[ProductPriceCreateSchema] = field(default_factory=list)
+    deletes: list[ProductPriceDeletePk] = field(default_factory=list)
+    unchanged = 0
+    obsolete = 0
+
+
 class EventProcessingService:
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -22,7 +31,8 @@ class EventProcessingService:
         db_conn: AsyncConnection,
         events: list[PriceEvent],
         product_prices: dict[BasePricePk, ProductPriceDBSchema],
-    ) -> tuple[list[ProductPriceCreateSchema], list[ProductPriceDeletePk]]:
+    ) -> EventProcessingResult:
+        res = EventProcessingResult()
         """
         Processing for upserts is handled sequentially, to ensure correct data
         First a snapshot of product prices are created then events change the state
@@ -33,8 +43,6 @@ class EventProcessingService:
             pk: ProductPriceCreateSchema(**product_price.model_dump())
             for pk, product_price in product_prices.items()
         }
-
-        deletes: list[ProductPriceDeletePk] = []
 
         for event in events:
             result_type, result_data = await self._process_event(
@@ -51,9 +59,14 @@ class EventProcessingService:
                     )
                 ] = changed_product_price
             elif result_type == ProcessResultType.DELETED:
-                deletes.append(cast(ProductPriceDeletePk, result_data))
+                res.deletes.append(cast(ProductPriceDeletePk, result_data))
+            elif result_type == ProcessResultType.OBSOLETE:
+                res.obsolete += 1
+            else:
+                res.unchanged += 1
 
-        return list(product_prices_snapshot.values()), deletes
+        res.upserted = list(product_prices_snapshot.values())
+        return res
 
     async def _process_event(
         self,
@@ -126,15 +139,11 @@ class EventProcessingService:
                 "min_price": min_price,
                 "max_price": max_price,
             }
-            self.logger.info("%s", extra)
-            self.logger.error(
-                "Invalid None value for min max price in process_upsert_event",
-                extra=extra,
-            )
-            return ProcessResultType.INVALID, None
+            self.logger.warning("Obsolete data in process_upsert_event %s", extra)
+            return ProcessResultType.OBSOLETE, None
 
         if max_price == price.max_price and min_price == price.min_price:
-            return ProcessResultType.NOT_CHANGED, None
+            return ProcessResultType.UNCHANGED, None
 
         return ProcessResultType.UPDATED, PriceChange(
             min_price=min_price, max_price=max_price
@@ -147,21 +156,21 @@ class EventProcessingService:
         price: ProductPriceCreateSchema | None,
     ) -> tuple[ProcessResultType, ProcessResultDataType]:
         if not price:
-            return ProcessResultType.NOT_CHANGED, None
+            return ProcessResultType.UNCHANGED, None
 
         max_price: float | None = price.max_price
         min_price: float | None = price.min_price
 
-        if event.old_price == price.max_price:
+        if event.price == price.max_price:
             max_price = await crud.offer.get_price_for_product(
                 db_conn, event.product_id, event.type, Aggregate.MAX
             )
-        elif event.old_price == price.min_price:
+        elif event.price == price.min_price:
             min_price = await crud.offer.get_price_for_product(
                 db_conn, event.product_id, event.type, Aggregate.MIN
             )
         else:
-            return ProcessResultType.NOT_CHANGED, None
+            return ProcessResultType.UNCHANGED, None
 
         if not min_price or not max_price:
             return ProcessResultType.DELETED, ProductPriceDeletePk(

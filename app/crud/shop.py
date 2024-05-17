@@ -21,8 +21,9 @@ class CRUDShop(CRUDBase[ShopDBSchema, ShopCreateSchema]):
             ["version", "certified", "verified", "paying", "enabled", "updated_at"],
         )
 
+    @staticmethod
     async def get_offers_in_stock_for_shops(
-        self, db_conn: AsyncConnection, shop_ids: list[UUID]
+        db_conn: AsyncConnection, shop_ids: list[UUID]
     ) -> list[OfferDBSchema]:
         """
         For each shop return all its offers which are in stock

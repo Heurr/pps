@@ -47,7 +47,7 @@ async def test_process_delete_event_not_changed(
 
     res = await event_processing_service._process_delete_event(db_conn_mock, event, price)
 
-    assert res[0] == ProcessResultType.NOT_CHANGED
+    assert res[0] == ProcessResultType.UNCHANGED
     assert not res[1]
 
 
@@ -109,8 +109,8 @@ async def test_process_delete_event(
         price_type=ProductPriceType.ALL_OFFERS,
     )
     event = price_event_factory(
-        old_price=event_price,
-        price=None,
+        price=event_price,
+        old_price=None,
         product_id=price.product_id,
         price_type=price.price_type,
     )
@@ -137,7 +137,7 @@ async def test_process_upsert_event_no_result(
 
     res = await event_processing_service._process_upsert_event(db_conn_mock, event, price)
 
-    assert res == (ProcessResultType.NOT_CHANGED, None)
+    assert res == (ProcessResultType.UNCHANGED, None)
 
 
 @pytest.mark.anyio
@@ -266,12 +266,39 @@ async def test_process_upsert_event_create_new(
 
 
 @pytest.mark.anyio
+async def test_process_upsert_event_obsolete(
+    mocker: MockFixture, event_processing_service: EventProcessingService
+):
+    """
+    Receive IN_STOCK price change which is obsolete. It can happen when
+    PPC receives offer msg which change price of in stock offer
+    and before related event msg is processed, a new available msg comes,
+    which change IN_STOCK status in DB.
+    """
+    db_conn_mock = mocker.AsyncMock()
+    crud_mock = mocker.patch.object(crud.offer, "get_price_for_product")
+    crud_mock.return_value = None
+
+    price = await product_price_factory(
+        db_schema=True, min_price=5, max_price=5, price_type=ProductPriceType.IN_STOCK
+    )
+    event = price_event_factory(
+        price=7, old_price=5, price_type=ProductPriceType.IN_STOCK
+    )
+
+    res = await event_processing_service._process_upsert_event(db_conn_mock, event, price)
+
+    assert res[0] == ProcessResultType.OBSOLETE
+    assert res[1] is None
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     "event, process_result_type, process_result_data, mock_name, result_data",
     [
         param(  # Not changed from upsert action
             price_event_factory(action=PriceEventAction.UPSERT),
-            ProcessResultType.NOT_CHANGED,
+            ProcessResultType.UNCHANGED,
             None,
             "_process_upsert_event",
             None,
@@ -279,7 +306,7 @@ async def test_process_upsert_event_create_new(
         ),
         param(  # Not changed from delete action
             price_event_factory(action=PriceEventAction.DELETE),
-            ProcessResultType.NOT_CHANGED,
+            ProcessResultType.UNCHANGED,
             None,
             "_process_delete_event",
             None,
@@ -381,12 +408,11 @@ async def test_process_events_bulk(
     mocker: MockFixture, event_processing_service: EventProcessingService
 ):
     """
-    Create 30 events, then mock the process event function to return
-    10 times NOT_CHANGED, 10 times DELETED and 10 times UPDATED.
+    Create 33 events, then mock the process event function to return
+    10 times UNCHANGED, 10 times DELETED, 10 times UPDATED and 3 time OBSOLETE
 
     Check if the function calls the process event function with the correct arguments
-    Check if the NOT_CHANGED events are not returned
-    CHeck if the DELETED and UPDATED events are returned
+    Check if processing result is returned correctly
     """
     # Mock
     db_conn_mock = mocker.AsyncMock()
@@ -395,17 +421,17 @@ async def test_process_events_bulk(
         price_event_factory(
             product_id=custom_uuid(i), price_type=ProductPriceType.ALL_OFFERS
         )
-        for i in range(40)
+        for i in range(44)
     ]
     product_prices = [
         await product_price_factory(
             product_id=custom_uuid(i), price_type=ProductPriceType.ALL_OFFERS
         )
-        for i in range(40)
+        for i in range(44)
     ]
     product_prices = {(pp.product_id, pp.price_type): pp for pp in product_prices}
     process_event_mock.side_effect = (
-        10 * [(ProcessResultType.NOT_CHANGED, None)]
+        10 * [(ProcessResultType.UNCHANGED, None)]
         + [
             (ProcessResultType.DELETED, (custom_uuid(i), ProductPriceType.ALL_OFFERS))
             for i in range(10)
@@ -428,20 +454,23 @@ async def test_process_events_bulk(
             )
             for i in range(10)
         ]
+        + 4 * [(ProcessResultType.OBSOLETE, None)]
     )
 
     # Call
-    upserts, deletes = await event_processing_service.process_events_bulk(
+    res = await event_processing_service.process_events_bulk(
         db_conn_mock,
         events,
         product_prices,
     )
 
     # Check
-    assert process_event_mock.call_count == 40
+    assert process_event_mock.call_count == 44
     for i, call in enumerate(process_event_mock.call_args_list):
         assert call[0] == (db_conn_mock, events[i], list(product_prices.values())[i])
 
-    # 30 Upserts are returned but only 10 would be upserted
-    assert len(upserts) == 40
-    assert len(deletes) == 10
+    # 44 Upserts are returned but only 10 would be upserted
+    assert len(res.upserted) == 44
+    assert len(res.deletes) == 10
+    assert res.unchanged == 10
+    assert res.obsolete == 4

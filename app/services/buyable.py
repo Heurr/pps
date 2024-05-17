@@ -1,47 +1,62 @@
+from sqlalchemy.ext.asyncio import AsyncConnection
+
 from app.constants import Entity, ProductPriceType
+from app.exceptions import PriceServiceError
 from app.schemas.buyable import BuyableCreateSchema
 from app.schemas.offer import OfferDBSchema
-from app.schemas.price_event import EntityUpdate, PriceEvent, PriceEventAction
+from app.schemas.price_event import PriceEvent, PriceEventAction
 from app.services.simple_entity import SimpleEntityBaseService
-from app.utils import utc_now
+from app.utils.price_event import create_price_event_from_offer
 
 
 class BuyableService(SimpleEntityBaseService[OfferDBSchema, BuyableCreateSchema]):
     def __init__(self):
         super().__init__(Entity.BUYABLE)
 
-    async def generate_price_events(
+    async def generate_price_events_for_new(
         self,
-        _db_conn,
-        offers: list[EntityUpdate[OfferDBSchema, BuyableCreateSchema]],
+        db_conn: AsyncConnection,  # noqa ARG002
+        new_buyable: BuyableCreateSchema,
     ) -> list[PriceEvent]:
-        price_events = []
-        for offer in offers:
-            # we store buyability for existing offers only
-            assert offer.old
-            if (offer.new and offer.new.buyable) and not offer.old.buyable:
-                price_events.append(
-                    PriceEvent(
-                        product_id=offer.old.product_id,
-                        type=ProductPriceType.MARKETPLACE,
-                        action=PriceEventAction.UPSERT,
-                        price=offer.old.price,
-                        country_code=offer.old.country_code,
-                        currency_code=offer.old.currency_code,
-                        created_at=utc_now(),
-                    )
-                )
-            elif (not offer.new or not offer.new.buyable) and offer.old.buyable:
-                price_events.append(
-                    PriceEvent(
-                        product_id=offer.old.product_id,
-                        type=ProductPriceType.MARKETPLACE,
-                        action=PriceEventAction.DELETE,
-                        old_price=offer.old.price,
-                        country_code=offer.old.country_code,
-                        currency_code=offer.old.currency_code,
-                        created_at=utc_now(),
-                    )
-                )
+        if new_buyable:
+            raise PriceServiceError(
+                "Unexpected a new buyable for generate_price_events_for_new"
+            )
+        return []
 
-        return price_events
+    async def generate_price_events_for_updated(
+        self,
+        db_conn: AsyncConnection,  # noqa ARG002
+        orig_db_offer: OfferDBSchema,
+        new_buyable: BuyableCreateSchema,
+    ) -> list[PriceEvent]:
+        event_action: PriceEventAction | None = None
+
+        if new_buyable.buyable and not orig_db_offer.buyable:
+            event_action = PriceEventAction.UPSERT
+        if not new_buyable.buyable and orig_db_offer.buyable:
+            event_action = PriceEventAction.DELETE
+
+        if not event_action:
+            return []
+
+        return [
+            create_price_event_from_offer(
+                offer=orig_db_offer,
+                price_type=ProductPriceType.MARKETPLACE,
+                action=event_action,
+            )
+        ]
+
+    async def generate_price_events_for_delete(
+        self, db_conn: AsyncConnection, orig_db_offer: OfferDBSchema  # noqa ARG002
+    ):
+        if orig_db_offer.buyable:
+            return [
+                create_price_event_from_offer(
+                    offer=orig_db_offer,
+                    price_type=ProductPriceType.MARKETPLACE,
+                    action=PriceEventAction.DELETE,
+                )
+            ]
+        return []

@@ -163,8 +163,8 @@ async def test_upsert_generate_events(
     assert events[1].product_id == custom_uuid(4)
     assert events[1].type == ProductPriceType.MARKETPLACE
     assert events[1].action == PriceEventAction.DELETE
-    assert events[1].price is None
-    assert events[1].old_price == 40.0
+    assert events[1].price == 40.0
+    assert events[1].old_price is None
 
 
 @pytest.mark.anyio
@@ -197,5 +197,5 @@ async def test_delete_generate_events(
     assert events[0].product_id == custom_uuid(4)
     assert events[0].type == ProductPriceType.MARKETPLACE
     assert events[0].action == PriceEventAction.DELETE
-    assert events[0].price is None
-    assert events[0].old_price == 40.0
+    assert events[0].price == 40.0
+    assert events[0].old_price is None

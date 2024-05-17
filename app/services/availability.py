@@ -1,9 +1,12 @@
+from sqlalchemy.ext.asyncio import AsyncConnection
+
 from app.constants import Entity, ProductPriceType
+from app.exceptions import PriceServiceError
 from app.schemas.availability import AvailabilityCreateSchema
 from app.schemas.offer import OfferDBSchema
-from app.schemas.price_event import EntityUpdate, PriceEvent, PriceEventAction
+from app.schemas.price_event import PriceEvent, PriceEventAction
 from app.services.simple_entity import SimpleEntityBaseService
-from app.utils import utc_now
+from app.utils.price_event import create_price_event_from_offer
 
 
 class AvailabilityService(
@@ -12,46 +15,61 @@ class AvailabilityService(
     def __init__(self):
         super().__init__(Entity.AVAILABILITY)
 
-    async def generate_price_events(
+    async def generate_price_events_for_new(
         self,
-        _db_conn,
-        offers: list[EntityUpdate[OfferDBSchema, AvailabilityCreateSchema]],
+        db_conn: AsyncConnection,  # noqa ARG002
+        new_availability: AvailabilityCreateSchema,
     ) -> list[PriceEvent]:
-        price_events = []
-        for offer in offers:
-            # we store availability for existing offers only
-            assert offer.old
-            types_actions: list[tuple[ProductPriceType, PriceEventAction]] = []
+        if new_availability:
+            raise PriceServiceError(
+                "Unexpected a new availability for generate_price_events_for_new"
+            )
+        return []
 
-            if (offer.new and offer.new.in_stock) and not offer.old.in_stock:
-                types_actions.append((ProductPriceType.IN_STOCK, PriceEventAction.UPSERT))
-                if offer.old.certified_shop:
-                    types_actions.append(
-                        (ProductPriceType.IN_STOCK_CERTIFIED, PriceEventAction.UPSERT)
-                    )
-            elif (not offer.new or not offer.new.in_stock) and offer.old.in_stock:
-                types_actions.append((ProductPriceType.IN_STOCK, PriceEventAction.DELETE))
-                if offer.old.certified_shop:
-                    types_actions.append(
-                        (ProductPriceType.IN_STOCK_CERTIFIED, PriceEventAction.DELETE)
-                    )
+    async def generate_price_events_for_updated(
+        self,
+        db_conn: AsyncConnection,  # noqa ARG002
+        orig_db_offer: OfferDBSchema,
+        new_availability: AvailabilityCreateSchema,
+    ) -> list[PriceEvent]:
+        types_actions: list[tuple[ProductPriceType, PriceEventAction]] = []
 
-            for type_, action in types_actions:
-                price_events.append(
-                    PriceEvent(
-                        product_id=offer.old.product_id,
-                        type=type_,
-                        action=action,
-                        price=(
-                            offer.old.price if action == PriceEventAction.UPSERT else None
-                        ),
-                        old_price=(
-                            offer.old.price if action == PriceEventAction.DELETE else None
-                        ),
-                        country_code=offer.old.country_code,
-                        currency_code=offer.old.currency_code,
-                        created_at=utc_now(),
-                    )
+        if new_availability.in_stock and not orig_db_offer.in_stock:
+            types_actions.append((ProductPriceType.IN_STOCK, PriceEventAction.UPSERT))
+            if orig_db_offer.certified_shop:
+                types_actions.append(
+                    (ProductPriceType.IN_STOCK_CERTIFIED, PriceEventAction.UPSERT)
+                )
+        if not new_availability.in_stock and orig_db_offer.in_stock:
+            types_actions.append((ProductPriceType.IN_STOCK, PriceEventAction.DELETE))
+            if orig_db_offer.certified_shop:
+                types_actions.append(
+                    (ProductPriceType.IN_STOCK_CERTIFIED, PriceEventAction.DELETE)
                 )
 
-        return price_events
+        return [
+            create_price_event_from_offer(
+                offer=orig_db_offer,
+                price_type=price_type,
+                action=price_action,
+            )
+            for price_type, price_action in types_actions
+        ]
+
+    async def generate_price_events_for_delete(
+        self, db_conn: AsyncConnection, orig_db_offer: OfferDBSchema  # noqa ARG002
+    ):
+        price_types: list[ProductPriceType] = []
+        if orig_db_offer.in_stock:
+            price_types.append(ProductPriceType.IN_STOCK)
+            if orig_db_offer.certified_shop:
+                price_types.append(ProductPriceType.IN_STOCK_CERTIFIED)
+
+        return [
+            create_price_event_from_offer(
+                offer=orig_db_offer,
+                price_type=price_type,
+                action=PriceEventAction.DELETE,
+            )
+            for price_type in price_types
+        ]

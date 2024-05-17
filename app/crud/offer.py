@@ -33,6 +33,10 @@ class CRUDOffer(CRUDBase[OfferDBSchema, OfferCreateSchema]):
         ProductPriceType.IN_STOCK: "offers.in_stock = TRUE",
     }
 
+    async def get(self, db_conn: AsyncConnection, obj_id: UUID) -> OfferDBSchema | None:
+        offers = await self.get_in(db_conn, [obj_id])
+        return offers.pop() if offers else None
+
     async def get_in(
         self, db_conn: AsyncConnection, obj_ids: list[UUID]
     ) -> list[OfferDBSchema]:

@@ -44,22 +44,30 @@ class PriceEventJob(BaseJob):
     async def process(self, objs: list[PriceEvent]) -> None:
         async with self.get_db_conn() as conn:
             product_prices = await self.get_product_prices_by_events(conn, objs)
-            (
-                to_update,
-                to_delete,
-            ) = await self.event_processing_service.process_events_bulk(
+            proc_result = await self.event_processing_service.process_events_bulk(
                 conn, objs, product_prices
             )
 
             updated = await self.product_price_service.upsert_many(
-                conn, to_update, list(product_prices.values())
+                conn, proc_result.upserted, list(product_prices.values())
             )
-            deleted = await crud.product_price.remove_many(conn, to_delete, utc_today())
+            deleted = await crud.product_price.remove_many(
+                conn, proc_result.deletes, utc_today()
+            )
 
-        self.logger.info("Upsert %i product prices", len(updated))
-        self.logger.info("Delete %i product prices", len(deleted))
+        self.logger.info(
+            "upserted %i | deleted %i | obsolete %i | unchanged %i",
+            len(updated),
+            len(deleted),
+            proc_result.obsolete,
+            proc_result.unchanged,
+        )
         self.metrics.labels(name=self.name, stage="upsert").inc(len(updated))
         self.metrics.labels(name=self.name, stage="delete").inc(len(deleted))
+        self.metrics.labels(name=self.name, stage="not_changed").inc(
+            proc_result.unchanged
+        )
+        self.metrics.labels(name=self.name, stage="obsolete").inc(proc_result.obsolete)
 
         publish_ids = {pk.product_id for pk in updated}
         if deleted:

@@ -53,7 +53,7 @@ class ProductPriceService:
         )
 
         products: dict[UUID, dict[ProductPriceType, ProductPriceDBSchema]] = defaultdict(
-            lambda: {}
+            dict
         )
         for product_price in product_prices:
             products[product_price.product_id][product_price.price_type] = product_price
