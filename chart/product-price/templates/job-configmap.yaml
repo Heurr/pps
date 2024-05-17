@@ -19,5 +19,8 @@ data:
   PPS_JOB_BATCH_SIZE: {{ $configValues.batchSize | quote }}
   PPS_JOB_QUEUE_POP_TIMEOUT: {{ $configValues.queuePopTimeout | quote }}
   PPS_SENTRY_DSN: {{ .Values.sentry.dsn | quote }}
+  PPS_RABBITMQ_HOST: {{ .Values.rabbitmq.host | quote }}
+  PPS_RABBITMQ_VIRTUAL_HOST: {{ .Values.rabbitmq.virtualhost | quote }}
+  PPS_RABBITMQ_EXCHANGE_NAME: {{ .Values.rabbitmq.exchange | quote }}
 {{- end -}}
 {{- end -}}
