@@ -244,7 +244,7 @@ entityPopulation:
   replyToRoutingKey: "op-product-price.republish-info"
   republishToRoutingKeyMap:
     buyable: "om-buyable.v1.update.pps"
-    availability: "availability.v2.create.pps"
+    availability: "om-availability.v2.create.pps"
   userAgent: "Product Price Service Republisher"
   republishBatch: 1000
   expireTimeInSeconds: 21600 # 6 hours
