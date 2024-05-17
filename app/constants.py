@@ -69,6 +69,7 @@ class Entity(StrEnum):
 
 class Job(StrEnum):
     EVENT_PROCESSING = "event-processing"
+    PRICE_PUBLISH = "price-publish"
 
 
 class Action(StrEnum):

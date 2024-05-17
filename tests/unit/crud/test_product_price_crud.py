@@ -123,6 +123,7 @@ async def test_delete_product_prices_empty(db_conn):
     assert len(product_price_db) == 1
 
 
+@pytest.mark.anyio
 async def test_remove_history(db_conn):
     # We can't create in the past because partition tables are only created
     # for the future

@@ -5,11 +5,12 @@ from uuid import UUID
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from app.config.settings import JobSettings
+from app.config.settings import JobSettings, ProductPricePublishSettings
 from app.constants import (
     Action,
     ProductPriceType,
 )
+from app.exceptions import PriceServiceError
 from app.jobs.base import BaseJob
 from app.schemas.product_price import (
     ProductPriceDBSchema,
@@ -21,18 +22,26 @@ from app.utils import version_now
 from app.utils.product_price_entity_client import ProductPriceEntityClient
 
 
-class PriceToRabbitEventJob(BaseJob):
+class PublishingPriceJob(BaseJob):
     def __init__(
         self,
         name: str,
         db_engine: AsyncEngine,
         redis: Redis,
-        rmq: ProductPriceEntityClient,
         settings: JobSettings,
+        product_price_publish_settings: ProductPricePublishSettings | None = None,
     ):
         super().__init__(name, db_engine, redis, settings)
+        self.rmq: ProductPriceEntityClient | None = None
+        self.product_price_publish_settings = (
+            product_price_publish_settings or ProductPricePublishSettings()
+        )
         self.product_price_service = ProductPriceService()
-        self.rmq = rmq
+
+    async def run(self):
+        async with ProductPriceEntityClient(self.product_price_publish_settings) as rmq:
+            self.rmq = rmq
+            await super().run()
 
     async def read(self) -> list[UUID]:
         res = cast(
@@ -45,6 +54,8 @@ class PriceToRabbitEventJob(BaseJob):
         return [UUID(bytes=obj) for obj in res]
 
     async def process(self, obj_ids: list[UUID]):
+        if not self.rmq:
+            raise PriceServiceError("RabbitMQ client is not initialized")
         async with self.get_db_conn() as conn:
             product_prices = (
                 await self.product_price_service.get_today_prices_for_products(

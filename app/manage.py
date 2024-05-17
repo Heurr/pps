@@ -20,10 +20,9 @@ from app.db import db_adapter
 from app.job_app import job_app
 from app.jobs.entity_population import EntityPopulationJob
 from app.jobs.maintenance import MaintenanceJob
-from app.jobs.price_to_rabbit import PriceToRabbitEventJob
+from app.jobs.price_publish import PublishingPriceJob
 from app.jobs.validation import ValidationJob
 from app.utils.log import prepare_logging
-from app.utils.product_price_entity_client import ProductPriceEntityClient
 from app.utils.redis_adapter import RedisAdapter
 from app.utils.sentry import init_sentry
 from app.worker_app import run_message_worker
@@ -141,28 +140,27 @@ def validation_job():
 
 
 @app.command()
-def entity_to_rabbit_job():
-    logger.info("Starting entity population job")
+def publish_price_job():
+    logger.info("Starting price publishing job")
 
     init_sentry(server_name="product-price-rabbit", component="job")
 
-    async def run_entity_to_rabbit_job():
+    async def run_publish_price_job():
         try:
             worker_settings = WorkerSetting()
             job_settings = JobSettings()
             async with (
                 db_adapter as db_engine,
                 RedisAdapter(worker_settings.redis_dsn) as redis,
-                ProductPriceEntityClient() as rmq,
             ):
-                job = PriceToRabbitEventJob(
-                    PRICE_EVENT_QUEUE.value, db_engine, redis, rmq, job_settings
+                job = PublishingPriceJob(
+                    PRICE_EVENT_QUEUE.value, db_engine, redis, job_settings
                 )
                 await job.run()
         except Exception as exc:
             logger.exception("Entity population job failed", exc_info=exc)
 
-    asyncio.run(run_entity_to_rabbit_job())
+    asyncio.run(run_publish_price_job())
 
 
 @app.command()

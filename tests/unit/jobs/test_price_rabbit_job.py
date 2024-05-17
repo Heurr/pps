@@ -14,7 +14,7 @@ from app.constants import (
     CurrencyCode,
     ProductPriceType,
 )
-from app.jobs.price_to_rabbit import PriceToRabbitEventJob
+from app.jobs.price_publish import PublishingPriceJob
 from app.schemas.product_price import (
     ProductPriceDBSchema,
     ProductPricePricesRabbitSchema,
@@ -34,10 +34,15 @@ def job_settings() -> JobSettings:
 async def mock_price_to_rabbit_event_job(
     job_settings: JobSettings,
     mocker: MockFixture,
-) -> PriceToRabbitEventJob:
-    job = PriceToRabbitEventJob(
+) -> PublishingPriceJob:
+    client_mock = mocker.patch(
+        "app.utils.product_price_entity_client.ProductPriceEntityClient", autospec=True
+    )
+    client_mock_instance = client_mock.return_value
+    client_mock.return_value.__aenter__ = AsyncMock(return_value=client_mock_instance)
+
+    job = PublishingPriceJob(
         PRICE_EVENT_QUEUE,
-        AsyncMock(),
         AsyncMock(),
         AsyncMock(),
         job_settings,
@@ -74,6 +79,8 @@ async def test_price_to_rabbit_read(
 @freeze_time("2024-04-26 12:00:00")
 async def test_process_sends_entities_to_rabbitmq(mock_price_to_rabbit_event_job, mocker):
     crud_mock = mocker.patch.object(crud.product_price, "get_by_product_id_and_day")
+    mock_price_to_rabbit_event_job.rmq = AsyncMock()
+
     crud_mock.return_value = [
         await product_price_factory(
             db_schema=True,

@@ -13,11 +13,10 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from app import crud
-from app.config.settings import JobSettings, ProductPricePublishSettings, RabbitmqSettings
+from app.config.settings import JobSettings, ProductPricePublishSettings
 from app.constants import PRICE_EVENT_QUEUE, ProductPriceType
 from app.jobs.base import BaseJob
-from app.jobs.price_to_rabbit import PriceToRabbitEventJob
-from app.utils.product_price_entity_client import ProductPriceEntityClient
+from app.jobs.price_publish import PublishingPriceJob
 from tests.factories import offer_factory, product_price_factory
 from tests.utils import custom_uuid, override_obj_get_db_conn
 
@@ -31,7 +30,9 @@ async def settings() -> ProductPricePublishSettings:
 
 @pytest.fixture
 async def rmq_queue(
-    rmq_channel: AbstractChannel, rmq_exchange: AbstractExchange, settings
+    rmq_channel: AbstractChannel,
+    rmq_exchange: AbstractExchange,
+    settings: ProductPricePublishSettings,
 ) -> AbstractQueue:
     queue = await rmq_channel.declare_queue(
         "testing-queue", durable=False, auto_delete=True
@@ -41,26 +42,14 @@ async def rmq_queue(
 
 
 @pytest.fixture
-async def mock_rmq_entity_client(
-    rmq_channel: AbstractChannel,
-    rmq_exchange: AbstractExchange,
-    rmq_settings: RabbitmqSettings,
-    settings: ProductPricePublishSettings,
-) -> ProductPriceEntityClient:
-    async with ProductPriceEntityClient(settings=settings) as rmq:
-        yield rmq
-
-
-@pytest.fixture
 async def rabbit_feeder_job(
+    rmq_queue: AbstractQueue,
     db_engine: AsyncEngine,
     db_conn: AsyncConnection,
-    mock_rmq_entity_client: ProductPriceEntityClient,
     redis: Redis,
+    settings: ProductPricePublishSettings,
 ):
-    job = PriceToRabbitEventJob(
-        PRICE_EVENT_QUEUE, db_engine, redis, mock_rmq_entity_client, JobSettings()
-    )
+    job = PublishingPriceJob(PRICE_EVENT_QUEUE, db_engine, redis, JobSettings(), settings)
     override_obj_get_db_conn(db_conn, job)
     job_task = asyncio.create_task(job.run())
     await asyncio.sleep(0.1)
@@ -80,7 +69,7 @@ async def push_to_redis_queue(
 @pytest.mark.anyio
 async def test_price_rabbit_job(
     db_conn,
-    rabbit_feeder_job: PriceToRabbitEventJob,
+    rabbit_feeder_job: PublishingPriceJob,
     caplog,
     rmq_queue,
     rmq_exchange,

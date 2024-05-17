@@ -223,7 +223,9 @@ jobs:
   event-processing:
     batchSize: 200
     queuePopTimeout: 0.2
-
+  price-publish:
+    batchSize: 200
+    queuePopTimeout: 0.2
 cronJobs:
   populate-entities:
     schedule: "00 */3 * * *" # Every 3 hours at 00
