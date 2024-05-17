@@ -48,7 +48,9 @@ class RabbitmqRepublishClient(BaseRabbitmqAdapter):
             for i in range(0, len(ids), self.republish_batch):
                 batch = ids[i : i + self.republish_batch]
                 message = Message(
-                    body=dump_to_json({"ids": batch}).encode("utf-8"),
+                    body=dump_to_json({"ids": batch, "entity": self.entity.value}).encode(
+                        "utf-8"
+                    ),
                     headers=self._headers,
                 )
                 await self.exchange.publish(message, self.target_routing_key)
@@ -67,4 +69,4 @@ class RabbitmqRepublishClient(BaseRabbitmqAdapter):
             content_type=self.content_type,
             hg_republish_to=self.republish_to_routing_key,  # type: ignore
             hg_reply_to=self.reply_to_routing_key,
-        ).model_dump()
+        ).model_dump(by_alias=True)

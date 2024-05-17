@@ -226,7 +226,7 @@ jobs:
 
 cronJobs:
   populate-entities:
-    schedule: "00 */4 * * *" # Every 4 hours at 00
+    schedule: "00 */3 * * *" # Every 3 hours at 00
     args: "entity-population-job availability buyable"
   maintenance:
     schedule: "50 23 * * *" # Every day at 23:50 UTC
@@ -245,6 +245,7 @@ entityPopulation:
     availability: "availability.v2.create.pps"
   userAgent: "Product Price Service Republisher"
   republishBatch: 1000
+  expireTimeInSeconds: 21600 # 6 hours
 
 maintenance:
   historyInterval: 35

@@ -241,6 +241,7 @@ async def test_price_event_job_duplicate_keys_in_one_batch_create_update(
     assert caplog.messages[-1] == "Push 1 product ids to the publisher queue"
 
 
+@pytest.mark.anyio
 async def test_price_event_job_duplicate_keys_in_one_batch_update_update(
     db_conn, entity_population_job: PriceEventJob, caplog, redis
 ):

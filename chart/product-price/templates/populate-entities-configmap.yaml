@@ -24,5 +24,6 @@ data:
   PPS_REPLY_TO_ROUTING_KEY: {{ .Values.entityPopulation.replyToRoutingKey | quote }}
   PPS_REPUBLISH_TO_ROUTING_KEY_MAP: {{ .Values.entityPopulation.republishToRoutingKeyMap | toJson | squote }}
   PPS_USER_AGENT: {{ .Values.entityPopulation.userAgent | quote }}
-  PPS_REPUBLISH_BATCH: {{ .Values.entityPopulation.republishBatch | quote }}
+  PPS_ENTITY_POPULATION_BATCH_SIZE: {{ .Values.entityPopulation.republishBatch | quote }}
+  PPS_ENTITY_POPULATION_EXPIRE_TIME_IN_SECONDS: {{ .Values.entityPopulation.expireTimeInSeconds | quote }}
   PPS_SENTRY_DSN: {{ .Values.sentry.dsn | quote }}

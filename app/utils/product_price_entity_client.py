@@ -44,4 +44,4 @@ class ProductPriceEntityClient(BaseRabbitmqAdapter):
         return EntityHeaders(
             user_agent=self.user_agent,
             content_type=self.content_type,
-        ).model_dump()
+        ).model_dump(by_alias=True)

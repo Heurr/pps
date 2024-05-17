@@ -35,15 +35,18 @@ async def test_republish_ids(mocker, mock_rmq_publisher_client: RabbitmqRepublis
     await mock_rmq_publisher_client.republish_ids([republish_id])
 
     rmq_mock.assert_called_once()
-    assert orjson.dumps({"ids": [republish_id]}) == rmq_mock.call_args.args[0].body
+    assert (
+        orjson.dumps({"ids": [republish_id], "entity": "buyable"})
+        == rmq_mock.call_args.args[0].body
+    )
     headers = RepublishHeaders(**rmq_mock.call_args.args[0].headers)
-    assert headers.model_dump(exclude={"hg_message_id"}) == {
-        "user_agent": "Product Price Service Republisher",
-        "content_type": "application/json",
-        "hg_republish_to": "om-buyable.v1.update.pps",
-        "hg_reply_to": "op-product-price.republish-info",
+    assert headers.model_dump(exclude={"hg_message_id"}, by_alias=True) == {
+        "user-agent": "Product Price Service Republisher",
+        "content-type": "application/json",
+        "hg-republish-to": "om-buyable.v1.update.pps",
+        "hg-reply-to": "op-product-price.republish-info",
     }
-    assert "hg_message_id" in rmq_mock.call_args.args[0].headers
+    assert "hg-message-id" in rmq_mock.call_args.args[0].headers
     assert rmq_mock.call_args.args[1] == "om-buyable.v1.republish"
 
 

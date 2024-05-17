@@ -27,8 +27,8 @@ class EntityPopulationJob:
     ):
         job_settings = job_settings or EntityPopulationJobSettings()
         self.republish_settings = republish_settings or RepublishSettings()
-        self.batch_size = job_settings.BATCH_SIZE
-        self.expire_time = job_settings.EXPIRE_TIME
+        self.batch_size = job_settings.ENTITY_POPULATION_BATCH_SIZE
+        self.expire_time = job_settings.ENTITY_POPULATION_EXPIRE_TIME_IN_SECONDS
         self.db_engine = db_engine
         self.entities = entities
         self.logger = logging.getLogger(__name__)

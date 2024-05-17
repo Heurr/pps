@@ -149,8 +149,8 @@ class ConsumerSettings(RabbitmqSettings):
 
 
 class EntityPopulationJobSettings(Settings):
-    BATCH_SIZE: int = 1000
-    EXPIRE_TIME: int = 6 * 60 * 60  # 6 hours in seconds
+    ENTITY_POPULATION_BATCH_SIZE: int = 1000
+    ENTITY_POPULATION_EXPIRE_TIME_IN_SECONDS: int = 6 * 60 * 60  # 6 hours in seconds
 
 
 class MaintenanceJobSettings(Settings):
