@@ -174,7 +174,7 @@ class BaseMessageWorker(Generic[MessageSchemaT]):
         msgs: list[Message], batch_size: int
     ) -> Generator[list[Message], None, None]:
         for i in range(0, len(msgs), batch_size):
-            yield msgs[i + i : batch_size]
+            yield msgs[i : i + batch_size]
 
     async def process_messages_in_buffer_bulk(self) -> None:
         if not self.messages_buffer:
