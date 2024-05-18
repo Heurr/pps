@@ -72,7 +72,8 @@ class PriceEventJob(BaseJob):
         publish_ids = {pk.product_id for pk in updated}
         if deleted:
             publish_ids |= {pk.product_id for pk in deleted}
-        await self.push_to_publisher_queue(publish_ids)
+        # Temporary disabled publishing until publisher job is implemented
+        # await self.push_to_publisher_queue(publish_ids)
 
     async def push_to_publisher_queue(self, product_ids: set[UUID]) -> None:
         if product_ids:
